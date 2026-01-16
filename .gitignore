@@ -1,0 +1,40 @@
+# Compilación
+bin/
+*.class
+*.jar
+*.war
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+*.swp
+*.swo
+*~
+
+# Build
+target/
+build/
+dist/
+
+# Dependencias
+lib/
+*.log
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+# Archivos temporales
+*.tmp
+*.temp
+
+# Base de datos local
+*.db
+*.sqlite
+*.sqlite3
+
+# Configuración local
+local.properties
