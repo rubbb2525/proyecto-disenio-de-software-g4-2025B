@@ -1,0 +1,54 @@
+# Compilación
+bin/
+*.class
+*.jar
+*.war
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+*.swp
+*.swo
+*~
+
+# Build
+target/
+build/
+dist/
+
+# Dependencias
+lib/
+*.log
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+# Archivos temporales
+*.tmp
+*.temp
+
+# Base de datos local
+*.db
+*.sqlite
+*.sqlite3
+
+# Configuración local
+local.properties
+# Ignorar bases de datos SQLite generadas
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Ignorar archivos de backup
+*.bak
+*.backup
+*.sql~
+
+# Ignorar archivos temporales
+*.tmp
+*.temp
