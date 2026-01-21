@@ -38,3 +38,17 @@ Thumbs.db
 
 # Configuración local
 local.properties
+
+# Ignorar bases de datos SQLite generadas
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Ignorar archivos de backup
+*.bak
+*.backup
+*.sql~
+
+# Ignorar archivos temporales
+*.tmp
+*.temp
