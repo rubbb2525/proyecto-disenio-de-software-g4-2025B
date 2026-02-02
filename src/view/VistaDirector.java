@@ -29,6 +29,7 @@ public class VistaDirector extends JFrame {
     private JTable tablaAyudantes;
     private StyledButton btnRegistrar;
     private StyledButton btnDarBaja;
+    private StyledButton btnCrearProyecto;
     private StyledButton btnRefrescar;
     private JLabel lblProyecto;
     private JLabel lblCuposDisponibles;
@@ -166,6 +167,10 @@ public class VistaDirector extends JFrame {
         btnDarBaja.setToolTipText("Dar de baja ayudante seleccionado (Supr)");
         acciones.add(btnRegistrar);
         acciones.add(btnDarBaja);
+        btnCrearProyecto = new StyledButton("Crear Proyecto", StyledButton.TipoBoton.EXITO);
+        btnCrearProyecto.setIcon(IconManager.getInstance().getIcon("project.svg", 16));
+        btnCrearProyecto.setToolTipText("Crear nuevo proyecto de investigación (Ctrl+P)");
+        acciones.add(btnCrearProyecto);
 
         JPanel centro = new JPanel();
         centro.setBackground(COLOR_FONDO);
@@ -226,6 +231,19 @@ public class VistaDirector extends JFrame {
                 cargarDatos();
             }
         });
+
+        btnCrearProyecto.addActionListener(e -> {
+            if (!controlador.puedeCrearProyecto()) {
+                ToastMessage.mostrar(this, "Ya tiene un proyecto activo", ToastMessage.TipoToast.ADVERTENCIA);
+                return;
+            }
+            DialogoFormularioProyecto dialogo = new DialogoFormularioProyecto(this, controlador);
+            dialogo.setVisible(true);
+            if (dialogo.seGuardo()) {
+                ToastMessage.mostrar(this, "Proyecto creado exitosamente", ToastMessage.TipoToast.EXITO);
+                cargarDatos();
+            }
+        });
     }
     
     private void configurarAtajosTeclado() {
@@ -247,6 +265,13 @@ public class VistaDirector extends JFrame {
         getRootPane().registerKeyboardAction(
             e -> darDeBajaAyudante(),
             KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0),
+            JComponent.WHEN_IN_FOCUSED_WINDOW
+        );
+
+        // Ctrl+P - Crear Proyecto
+        getRootPane().registerKeyboardAction(
+            e -> btnCrearProyecto.doClick(),
+            KeyStroke.getKeyStroke(KeyEvent.VK_P, java.awt.event.InputEvent.CTRL_DOWN_MASK),
             JComponent.WHEN_IN_FOCUSED_WINDOW
         );
     }

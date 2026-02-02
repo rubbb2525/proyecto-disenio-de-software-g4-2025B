@@ -152,14 +152,14 @@ public class ProyectoDAO implements IDAO<ProyectoInvestigacion> {
         proyecto.setNombreProyecto(rs.getString("nombre_proyecto"));
         proyecto.setDescripcion(rs.getString("descripcion"));
 
-        // SQLite almacena fechas como texto; evitamos parseo de timestamp
+        // SQLite almacena fechas como texto; soportar múltiples formatos
         String inicioStr = rs.getString("fecha_inicio");
         String finStr = rs.getString("fecha_fin");
         if (inicioStr != null && !inicioStr.isBlank()) {
-            proyecto.setFechaInicio(java.sql.Date.valueOf(inicioStr));
+            proyecto.setFechaInicio(parseFecha(inicioStr));
         }
         if (finStr != null && !finStr.isBlank()) {
-            proyecto.setFechaFin(java.sql.Date.valueOf(finStr));
+            proyecto.setFechaFin(parseFecha(finStr));
         }
 
         proyecto.setEstado(rs.getString("estado"));
@@ -167,6 +167,22 @@ public class ProyectoDAO implements IDAO<ProyectoInvestigacion> {
         proyecto.setAyudantesPlanificados(rs.getInt("ayudantes_planificados"));
         
         return proyecto;
+    }
+
+    // Parsea fechas en múltiples formatos (YYYY-MM-DD o YYYY-MM-DD HH:MM:SS.mmm)
+    private java.util.Date parseFecha(String fechaStr) {
+        if (fechaStr == null || fechaStr.isBlank()) {
+            return null;
+        }
+        
+        try {
+            // Si la fecha incluye timestamp, extraer solo la parte de la fecha
+            String fechaSolo = fechaStr.split(" ")[0];
+            return java.sql.Date.valueOf(fechaSolo);
+        } catch (IllegalArgumentException e) {
+            System.out.println("Error al parsear fecha: " + fechaStr);
+            return null;
+        }
     }
 
     // Normaliza valores leídos de BD a los enums definidos

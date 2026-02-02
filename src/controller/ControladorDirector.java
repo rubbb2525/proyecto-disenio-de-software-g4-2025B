@@ -273,4 +273,144 @@ public class ControladorDirector {
         }
         return proyecto.tieneCupoDisponible();
     }
+
+    /**
+     * NUEVO: Crea un nuevo proyecto de investigación
+     * 
+     * RESPONSABILIDAD ÚNICA:
+     * - Valida los datos del proyecto
+     * - Verifica que el director no tenga proyecto activo
+     * - Crea el proyecto y lo persiste en BD
+     * - Notifica a la jefa de departamento
+     * 
+     * @param codigoProyecto Código único del proyecto
+     * @param nombreProyecto Nombre del proyecto
+     * @param descripcion Descripción del proyecto
+     * @param fechaInicio Fecha de inicio
+     * @param fechaFin Fecha de finalización
+     * @param tipoProyecto Tipo de proyecto (INTERNO, SEMILLA, etc.)
+     * @param ayudantesPlanificados Número de ayudantes planificados
+     * @return ResultadoOperacion con el resultado de la operación
+     */
+    public ResultadoOperacion crearProyecto(String codigoProyecto, String nombreProyecto, 
+                                           String descripcion, Date fechaInicio, Date fechaFin,
+                                           TipoProyecto tipoProyecto, int ayudantesPlanificados) {
+        ResultadoOperacion resultado = new ResultadoOperacion();
+
+        // Validar que el director no tenga ya un proyecto activo
+        ProyectoInvestigacion proyectoExistente = obtenerProyectoDelDirector();
+        if (proyectoExistente != null && "ACTIVO".equals(proyectoExistente.getEstado())) {
+            resultado.setMensaje("El director ya tiene un proyecto activo");
+            resultado.agregarError("No se puede crear más de un proyecto activo simultáneamente");
+            return resultado;
+        }
+
+        // Validar código del proyecto
+        if (codigoProyecto == null || codigoProyecto.trim().isEmpty()) {
+            resultado.setMensaje("El código del proyecto es obligatorio");
+            resultado.agregarError("Código de proyecto vacío");
+            return resultado;
+        }
+
+        // Validar que el código no esté duplicado
+        ProyectoInvestigacion proyectoDuplicado = proyectoDAO.buscarPorCodigo(codigoProyecto);
+        if (proyectoDuplicado != null) {
+            resultado.setMensaje("El código de proyecto ya existe");
+            resultado.agregarError("Código duplicado: " + codigoProyecto);
+            return resultado;
+        }
+
+        // Validar nombre del proyecto
+        if (nombreProyecto == null || nombreProyecto.trim().isEmpty()) {
+            resultado.setMensaje("El nombre del proyecto es obligatorio");
+            resultado.agregarError("Nombre de proyecto vacío");
+            return resultado;
+        }
+
+        // Validar fechas
+        if (fechaInicio == null || fechaFin == null) {
+            resultado.setMensaje("Las fechas son obligatorias");
+            resultado.agregarError("Fechas incompletas");
+            return resultado;
+        }
+
+        if (fechaFin.before(fechaInicio)) {
+            resultado.setMensaje("La fecha de fin debe ser posterior a la fecha de inicio");
+            resultado.agregarError("Fechas inválidas");
+            return resultado;
+        }
+
+        // Validar tipo de proyecto
+        if (tipoProyecto == null) {
+            resultado.setMensaje("El tipo de proyecto es obligatorio");
+            resultado.agregarError("Tipo de proyecto no especificado");
+            return resultado;
+        }
+
+        // Validar número de ayudantes planificados
+        if (ayudantesPlanificados < 0) {
+            resultado.setMensaje("El número de ayudantes planificados debe ser mayor o igual a 0");
+            resultado.agregarError("Número de ayudantes inválido");
+            return resultado;
+        }
+
+        if (ayudantesPlanificados > 20) {
+            resultado.setMensaje("El número de ayudantes planificados no puede exceder 20");
+            resultado.agregarError("Demasiados ayudantes planificados");
+            return resultado;
+        }
+
+        // Crear el proyecto
+        ProyectoInvestigacion nuevoProyecto = new ProyectoInvestigacion(
+            codigoProyecto,
+            nombreProyecto,
+            descripcion,
+            fechaInicio,
+            fechaFin,
+            "ACTIVO",
+            tipoProyecto,
+            ayudantesPlanificados
+        );
+
+        // Asignar el director al proyecto
+        nuevoProyecto.setDirector(directorActual);
+
+        // Guardar en BD
+        if (!proyectoDAO.guardar(nuevoProyecto)) {
+            resultado.setMensaje("Error al guardar el proyecto en la base de datos");
+            resultado.agregarError("Error de persistencia");
+            return resultado;
+        }
+
+        // Notificar a la jefa de departamento
+        Notificacion notif = new Notificacion(
+            "NOT_" + System.currentTimeMillis(),
+            "Nuevo proyecto creado: " + nombreProyecto + 
+            " (" + codigoProyecto + ") por el director " + 
+            directorActual.getNombresCompletos(),
+            "PROGRESO_PROYECTO"
+        );
+        notif.setProyectoRelacionado(nuevoProyecto);
+        
+        // Guardar notificación en BD
+        notificacionDAO.guardar(notif);
+        
+        // Enviar a Jefa en memoria
+        jefaDepartamento.recibirNotificacion(notif);
+
+        resultado.setExitoso(true);
+        resultado.setMensaje("Proyecto creado exitosamente");
+
+        return resultado;
+    }
+
+    /**
+     * NUEVO: Verifica si el director puede crear un proyecto
+     * 
+     * @return true si el director no tiene proyecto activo, false en caso contrario
+     */
+    public boolean puedeCrearProyecto() {
+        ProyectoInvestigacion proyectoExistente = obtenerProyectoDelDirector();
+        return proyectoExistente == null || !"ACTIVO".equals(proyectoExistente.getEstado());
+    }
 }
