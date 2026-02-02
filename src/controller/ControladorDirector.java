@@ -2,11 +2,18 @@ package controller;
 
 import model.*;
 import model.dao.*;
+import model.service.*;
 import java.util.Date;
 import java.util.List;
 
 /**
  * Controlador para operaciones del Director
+ * 
+ * REFACTORIZACIÓN:
+ * - Usa ServicioConversionAyudante en lugar de llamar a Estudiante.convertirAAyudante()
+ * - Obtiene proyecto via DAO en lugar de mantenerlo como atributo en Director
+ * - Usa ServicioDeFiltrado para filtrado (no JefaDepartamento)
+ * - Usa ServicioDeEstadisticas para estadísticas
  */
 public class ControladorDirector {
     private Director directorActual;
@@ -15,6 +22,11 @@ public class ControladorDirector {
     private ProyectoDAO proyectoDAO;
     private NotificacionDAO notificacionDAO;
     private JefaDepartamento jefaDepartamento;
+    
+    // INYECCIÓN DE SERVICIOS
+    private ServicioConversionAyudante servicioConversion;
+    private ServicioDeFiltrado servicioDeFiltrado;
+    private ServicioDeEstadisticas servicioEstadisticas;
 
     public ControladorDirector(Director director, AyudanteDAO ayudanteDAO, 
                               EstudianteDAO estudianteDAO, ProyectoDAO proyectoDAO) {
@@ -24,6 +36,19 @@ public class ControladorDirector {
         this.proyectoDAO = proyectoDAO;
         this.notificacionDAO = new NotificacionDAO();
         this.jefaDepartamento = JefaDepartamento.getInstancia();
+        
+        // Inicializar servicios (son clases utilitarias, no instancias)
+        // ServicioDeFiltrado, ServicioConversion y ServicioDeEstadisticas 
+        // tienen métodos estáticos
+    }
+
+    /**
+     * NUEVO: Obtiene el proyecto del director (Lazy Loading)
+     * Antes: director.getProyectoAsignado() (podía ser null)
+     * Ahora: Se obtiene cuando se necesita via DAO
+     */
+    public ProyectoInvestigacion obtenerProyectoDelDirector() {
+        return proyectoDAO.buscarPorDirector(directorActual.getCodigoUnico());
     }
 
     /**
@@ -38,14 +63,20 @@ public class ControladorDirector {
 
     /**
      * Registra un nuevo ayudante
+     * 
+     * REFACTORIZACIÓN:
+     * - Usa ServicioConversionAyudante en lugar de estudiante.convertirAAyudante()
+     * - Valida antes de convertir usando puedeConvertirse()
+     * - Obtiene mensajes de error descriptivos
      */
     public ResultadoOperacion registrarAyudante(String codigoEstudiante, int horas, double salario) {
         ResultadoOperacion resultado = new ResultadoOperacion();
 
-        // Validar horas
-        if (horas > 32) {
-            resultado.setMensaje("Las horas semanales no pueden exceder 32");
-            resultado.agregarError("Horas semanales inválidas");
+        // Obtener proyecto del director
+        ProyectoInvestigacion proyecto = obtenerProyectoDelDirector();
+        if (proyecto == null) {
+            resultado.setMensaje("Director sin proyecto asignado");
+            resultado.agregarError("Proyecto no disponible");
             return resultado;
         }
 
@@ -57,17 +88,22 @@ public class ControladorDirector {
             return resultado;
         }
 
-        // Validar elegibilidad
-        if (!estudiante.esElegibleParaAyudantia()) {
-            resultado.setMensaje("Estudiante no cumple requisitos (IRA mín. 24, Nivel mín. 3)");
-            resultado.agregarError("Criterios no cumplidos");
+        // CAMBIO: Usar ServicioConversionAyudante
+        // Validar que se puede convertir
+        if (!ServicioConversionAyudante.puedeConvertirse(estudiante, horas, salario)) {
+            String errorMsg = ServicioConversionAyudante.obtenerMensajeError(
+                estudiante, horas, salario
+            );
+            resultado.setMensaje(errorMsg);
+            resultado.agregarError("Conversión no válida");
             return resultado;
         }
 
-        // Convertir a ayudante
-        Ayudante ayudante = estudiante.convertirAAyudante(
-            directorActual.getProyectoAsignado(), 
-            horas, 
+        // Convertir usando el servicio
+        Ayudante ayudante = ServicioConversionAyudante.convertirEstudianteAAyudante(
+            estudiante,
+            proyecto,
+            horas,
             salario
         );
 
@@ -88,11 +124,11 @@ public class ControladorDirector {
         Notificacion notif = new Notificacion(
             "NOT_" + System.currentTimeMillis(),
             "Nuevo ayudante registrado: " + ayudante.getNombresCompletos() + 
-            " en proyecto " + directorActual.getProyectoAsignado().getNombreProyecto(),
+            " en proyecto " + proyecto.getNombreProyecto(),
             "REGISTRO_AYUDANTE"
         );
         notif.setAyudanteRelacionado(ayudante);
-        notif.setProyectoRelacionado(directorActual.getProyectoAsignado());
+        notif.setProyectoRelacionado(proyecto);
         
         // Guardar en BD
         notificacionDAO.guardar(notif);
@@ -153,12 +189,42 @@ public class ControladorDirector {
 
     /**
      * Consulta los ayudantes del proyecto
+     * 
+     * REFACTORIZACIÓN:
+     * - Obtiene proyecto via método (no como atributo)
      */
     public List<Ayudante> consultarAyudantesDelProyecto() {
-        if (directorActual.getProyectoAsignado() == null) {
+        ProyectoInvestigacion proyecto = obtenerProyectoDelDirector();
+        if (proyecto == null) {
             return null;
         }
-        return ayudanteDAO.buscarPorProyecto(directorActual.getProyectoAsignado().getCodigoProyecto());
+        return ayudanteDAO.buscarPorProyecto(proyecto.getCodigoProyecto());
+    }
+
+    /**
+     * NUEVO: Obtiene ayudantes activos del proyecto
+     * Usa ServicioDeFiltrado para filtrado
+     */
+    public List<Ayudante> obtenerAyudantesActivos() {
+        List<Ayudante> ayudantes = consultarAyudantesDelProyecto();
+        if (ayudantes == null) {
+            return null;
+        }
+        // Usar servicio de filtrado
+        return ServicioDeFiltrado.obtenerActivos(ayudantes);
+    }
+
+    /**
+     * NUEVO: Obtiene estadísticas del proyecto
+     * Usa ServicioDeEstadisticas
+     */
+    public java.util.Map<String, Object> obtenerEstadisticasProyecto() {
+        List<Ayudante> ayudantes = consultarAyudantesDelProyecto();
+        if (ayudantes == null || ayudantes.isEmpty()) {
+            return new java.util.HashMap<>();
+        }
+        // Usar servicio de estadísticas
+        return ServicioDeEstadisticas.calcularTodas(ayudantes);
     }
 
     /**
@@ -169,9 +235,42 @@ public class ControladorDirector {
     }
 
     /**
-     * Obtiene el proyecto del director
+     * Obtiene el proyecto del director (usando lazy loading)
      */
     public ProyectoInvestigacion getProyecto() {
-        return directorActual.getProyectoAsignado();
+        return obtenerProyectoDelDirector();
+    }
+
+    /**
+     * NUEVO: Obtiene información del proyecto (nombre, descripción, etc)
+     */
+    public String obtenerNombreProyecto() {
+        ProyectoInvestigacion proyecto = obtenerProyectoDelDirector();
+        if (proyecto == null) {
+            return "Sin proyecto asignado";
+        }
+        return proyecto.getNombreProyecto();
+    }
+
+    /**
+     * NUEVO: Obtiene cupos disponibles en el proyecto
+     */
+    public int obtenerCuposDisponibles() {
+        ProyectoInvestigacion proyecto = obtenerProyectoDelDirector();
+        if (proyecto == null) {
+            return 0;
+        }
+        return proyecto.getCuposDisponibles();
+    }
+
+    /**
+     * NUEVO: Verifica si hay cupo disponible
+     */
+    public boolean hayCapoDisponible() {
+        ProyectoInvestigacion proyecto = obtenerProyectoDelDirector();
+        if (proyecto == null) {
+            return false;
+        }
+        return proyecto.tieneCupoDisponible();
     }
 }
