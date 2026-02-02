@@ -12,14 +12,12 @@ public class ControladorJefaDepartamento {
     private JefaDepartamento jefaDepartamento;
     private AyudanteDAO ayudanteDAO;
     private ProyectoDAO proyectoDAO;
-    private GeneradorReportes generadorReportes;
 
     public ControladorJefaDepartamento(JefaDepartamento jefa, AyudanteDAO ayudanteDAO, 
                                       ProyectoDAO proyectoDAO) {
         this.jefaDepartamento = jefa;
         this.ayudanteDAO = ayudanteDAO;
         this.proyectoDAO = proyectoDAO;
-        this.generadorReportes = new GeneradorReportes(proyectoDAO.listarTodos(), ayudanteDAO.listarTodos());
     }
 
     /**
@@ -74,7 +72,8 @@ public class ControladorJefaDepartamento {
      * Genera un reporte general
      */
     public Reporte generarReporteGeneral() {
-        return generadorReportes.generarReporteGeneral();
+        GeneradorReportes generador = new GeneradorReportes(proyectoDAO.listarTodos(), ayudanteDAO.listarTodos());
+        return generador.generarReporteGeneral();
     }
 
     /**
@@ -85,21 +84,24 @@ public class ControladorJefaDepartamento {
         if (proyecto == null) {
             return null;
         }
-        return generadorReportes.generarReportePorProyecto(proyecto);
+        GeneradorReportes generador = new GeneradorReportes(proyectoDAO.listarTodos(), ayudanteDAO.listarTodos());
+        return generador.generarReportePorProyecto(proyecto);
     }
 
     /**
      * Genera un reporte por carrera
      */
     public Reporte generarReportePorCarrera(String carrera) {
-        return generadorReportes.generarReportePorCarrera(carrera);
+        GeneradorReportes generador = new GeneradorReportes(proyectoDAO.listarTodos(), ayudanteDAO.listarTodos());
+        return generador.generarReportePorCarrera(carrera);
     }
 
     /**
      * Genera un reporte por nivel
      */
     public Reporte generarReportePorNivel(int nivel) {
-        return generadorReportes.generarReportePorNivel(nivel);
+        GeneradorReportes generador = new GeneradorReportes(proyectoDAO.listarTodos(), ayudanteDAO.listarTodos());
+        return generador.generarReportePorNivel(nivel);
     }
 
     /**
