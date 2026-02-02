@@ -5,6 +5,11 @@ import view.*;
 
 /**
  * Clase principal de la aplicación
+ * 
+ * REFACTORIZACIÓN:
+ * - No llama a director.setProyectoAsignado() (Director ya no mantiene proyecto)
+ * - El proyecto se obtiene via DAO cuando sea necesario (Lazy Loading)
+ * - Importa servicios para que estén disponibles
  */
 public class App {
     private static MiembroEPNDAO miembroDAO;
@@ -19,7 +24,7 @@ public class App {
     public static void main(String[] args) throws Exception {
         System.out.println("\n╔════════════════════════════════════════════════════════╗");
         System.out.println("║   Sistema Gestión Ayudantes - FIS-EPN                 ║");
-        System.out.println("║   Versión 1.0 | SQLite                               ║");
+        System.out.println("║   Versión 2.0 | SQLite + Servicios Refactorizados   ║");
         System.out.println("╚════════════════════════════════════════════════════════╝\n");
         
         // Inicializar conexión a BD SQLite
@@ -54,7 +59,7 @@ public class App {
         estudianteDAO = new EstudianteDAO();
         proyectoDAO = new ProyectoDAO();
         
-        System.out.println("DAOs inicializados correctamente");
+        System.out.println("✓ DAOs inicializados correctamente");
     }
 
     public static void navegarSegunRol(String rol) {
@@ -68,10 +73,15 @@ public class App {
                 abrirVistaJefaDepartamento();
                 break;
             default:
-                System.out.println("Rol no reconocido");
+                System.out.println("✗ Rol no reconocido: " + rol);
         }
     }
 
+    /**
+     * REFACTORIZACIÓN:
+     * - NO llama a director.setProyectoAsignado()
+     * - El proyecto se obtiene via DAO cuando sea necesario en ControladorDirector
+     */
     private static void abrirVistaDirector() {
         MiembroEPN usuario = controladorAuth.getUsuarioActual();
         if (usuario == null) {
@@ -79,6 +89,7 @@ public class App {
             return;
         }
 
+        // Crear objeto Director con datos básicos
         Director director = new Director(
             usuario.getCodigoUnico(),
             usuario.getCedula(),
@@ -89,19 +100,35 @@ public class App {
             usuario.getTelefono()
         );
 
-        ProyectoInvestigacion proyecto = proyectoDAO.buscarPorDirector(director.getCodigoUnico());
-        director.setProyectoAsignado(proyecto);
+        // CAMBIO: NO asignar proyecto aquí
+        // El proyecto se obtendrá via DAO en ControladorDirector.obtenerProyectoDelDirector()
+        // cuando sea necesario (Lazy Loading)
+        
+        // ProyectoInvestigacion proyecto = proyectoDAO.buscarPorDirector(director.getCodigoUnico());
+        // director.setProyectoAsignado(proyecto);  ← ELIMINADO
 
-        ControladorDirector ctrlDirector = new ControladorDirector(director, ayudanteDAO, estudianteDAO, proyectoDAO);
+        // Crear controlador del director
+        ControladorDirector ctrlDirector = new ControladorDirector(
+            director, 
+            ayudanteDAO, 
+            estudianteDAO, 
+            proyectoDAO
+        );
+        
+        // Mostrar vista
         vistaDirector = new VistaDirector(ctrlDirector);
         vistaDirector.setVisible(true);
     }
 
+    /**
+     * Abre vista de Jefa de Departamento
+     */
     private static void abrirVistaJefaDepartamento() {
         MiembroEPN usuario = controladorAuth.getUsuarioActual();
         JefaDepartamento jefa = JefaDepartamento.getInstancia();
 
         if (usuario != null) {
+            // Actualizar datos de la jefa singleton
             jefa.setCodigoUnico(usuario.getCodigoUnico());
             jefa.setCedula(usuario.getCedula());
             jefa.setCorreoInstitucional(usuario.getCorreoInstitucional());
@@ -112,7 +139,14 @@ public class App {
             jefa.setEstado(usuario.getEstado());
         }
 
-        ControladorJefaDepartamento ctrlJefa = new ControladorJefaDepartamento(jefa, ayudanteDAO, proyectoDAO);
+        // Crear controlador de jefa
+        ControladorJefaDepartamento ctrlJefa = new ControladorJefaDepartamento(
+            jefa, 
+            ayudanteDAO, 
+            proyectoDAO
+        );
+        
+        // Mostrar vista
         vistaJefa = new VistaJefaDepartamento(ctrlJefa);
         vistaJefa.refrescar(); // Inicializar contador de notificaciones
         vistaJefa.setVisible(true);

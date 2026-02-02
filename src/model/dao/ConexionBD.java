@@ -12,7 +12,7 @@ public class ConexionBD {
     private Connection conexion;
     
     // Datos de conexión SQLite
-    private static final String URL = "jdbc:sqlite:gestion_ayudantes.db";
+    private static final String URL = "jdbc:sqlite:./bd/gestion_ayudantes.db";
     private static final String DRIVER = "org.sqlite.JDBC";
 
     private ConexionBD() {
