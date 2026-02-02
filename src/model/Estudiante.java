@@ -2,6 +2,7 @@ package model;
 
 /**
  * Representa un estudiante de la FIS-EPN
+ * RESPONSABILIDAD ÚNICA: Mantener datos y lógica específica de estudiante
  */
 public class Estudiante extends MiembroEPN {
     private String carrera;
@@ -23,41 +24,24 @@ public class Estudiante extends MiembroEPN {
     /**
      * Valida si un estudiante es elegible para ser ayudante
      * Requisitos: IRA >= 24, Nivel >= 3
+     * 
+     * NOTA: Esta clase SOLO determina elegibilidad.
+     * La conversión actual se delega a ServicioConversionAyudante
      */
     public boolean esElegibleParaAyudantia() {
         return ira >= 24.0f && nivel >= 3;
     }
 
     /**
-     * Convierte un estudiante elegible a ayudante
+     * Obtiene el nombre completo del estudiante
      */
-    public Ayudante convertirAAyudante(ProyectoInvestigacion proyecto, int horas, double salario) {
-        if (!esElegibleParaAyudantia()) {
-            return null;
-        }
-
-        Ayudante ayudante = new Ayudante();
-        ayudante.setCodigoUnico(this.codigoUnico);
-        ayudante.setCedula(this.cedula);
-        ayudante.setCorreoInstitucional(this.correoInstitucional);
-        ayudante.setPassword(this.password);
-        ayudante.setNombres(this.nombres);
-        ayudante.setApellidos(this.apellidos);
-        ayudante.setTelefono(this.telefono);
-        ayudante.setRol("AYUDANTE");
-        ayudante.setEstado("ACTIVO");
-        ayudante.setCarrera(this.carrera);
-        ayudante.setNivel(this.nivel);
-        ayudante.setIRA(this.ira);
-        ayudante.setHorasSemanales(horas);
-        ayudante.setSalarioMensual(salario);
-        ayudante.setProyectoAsignado(proyecto);
-        ayudante.setFechaRegistro(new java.util.Date());
-        //agregar mes por hora y salario
-        return ayudante;
+    @Override
+    public String getNombresCompletos() {
+        return super.getNombresCompletos();
     }
 
-    // Getters y Setters
+    // ============ GETTERS Y SETTERS ============
+    
     public String getCarrera() {
         return carrera;
     }
@@ -80,5 +64,15 @@ public class Estudiante extends MiembroEPN {
 
     public void setNivel(int nivel) {
         this.nivel = nivel;
+    }
+
+    /**
+     * Validación básica de estudiante
+     */
+    public boolean esValido() {
+        return codigoUnico != null && !codigoUnico.isEmpty() &&
+               ira >= 0 && ira <= 20 &&
+               nivel >= 1 && nivel <= 10 &&
+               carrera != null && !carrera.isEmpty();
     }
 }

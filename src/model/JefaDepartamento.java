@@ -2,12 +2,18 @@ package model;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
  * Singleton que representa la Jefa de Departamento
- * Es responsable de notificaciones, filtros y consultas globales
+ * 
+ * RESPONSABILIDAD ÚNICA:
+ * Mantener los datos y responsabilidades de un usuario JEFA_DEPARTAMENTO
+ * 
+ * CAMBIOS PRINCIPALES:
+ * - Se eliminó filtrarAyudantes() → Usar ServicioDeFiltrado
+ * - Se mantienen notificaciones (son propiedad de la jefa)
+ * - Se simplificó para NO mezclar responsabilidades
  */
 public class JefaDepartamento extends MiembroEPN {
     private static JefaDepartamento instancia;
@@ -35,6 +41,9 @@ public class JefaDepartamento extends MiembroEPN {
         return instancia;
     }
 
+    // ============ RESPONSABILIDADES DE NOTIFICACIONES ============
+    // Estas SÍ pertenecen a JefaDepartamento (es quien las recibe)
+    
     /**
      * Recibe una notificación
      */
@@ -61,6 +70,15 @@ public class JefaDepartamento extends MiembroEPN {
     }
 
     /**
+     * Obtiene la cantidad de notificaciones no leídas
+     */
+    public int contarNotificacionesNoLeidas() {
+        return (int) notificaciones.stream()
+                .filter(n -> !n.isLeida())
+                .count();
+    }
+
+    /**
      * Marca todas las notificaciones como leídas
      */
     public void marcarTodasComoLeidas() {
@@ -68,63 +86,64 @@ public class JefaDepartamento extends MiembroEPN {
     }
 
     /**
-     * Filtra ayudantes según criterios
+     * Marca una notificación específica como leída
      */
-    public List<Ayudante> filtrarAyudantes(List<Ayudante> ayudantes, Map<String, Object> filtros) {
-        return ayudantes.stream()
-                .filter(a -> {
-                    // Filtro por proyecto
-                    if (filtros.containsKey("proyecto")) {
-                        String codigoProyecto = (String) filtros.get("proyecto");
-                        if (a.getProyectoAsignado() == null || 
-                            !a.getProyectoAsignado().getCodigoProyecto().equals(codigoProyecto)) {
-                            return false;
-                        }
-                    }
-
-                    // Filtro por carrera
-                    if (filtros.containsKey("carrera")) {
-                        String carrera = (String) filtros.get("carrera");
-                        if (!a.getCarrera().equals(carrera)) {
-                            return false;
-                        }
-                    }
-
-                    // Filtro por nivel
-                    if (filtros.containsKey("nivel")) {
-                        Integer nivel = (Integer) filtros.get("nivel");
-                        if (a.getNivel() != nivel) {
-                            return false;
-                        }
-                    }
-
-                    // Filtro por estado (Activos/Inactivos)
-                    if (filtros.containsKey("estado")) {
-                        String estado = (String) filtros.get("estado");
-                        if ("Activos".equals(estado) && !a.esActivo()) {
-                            return false;
-                        }
-                        if ("Inactivos".equals(estado) && a.esActivo()) {
-                            return false;
-                        }
-                    }
-
-                    return true;
-                })
-                .collect(Collectors.toList());
+    public void marcarComoLeida(Notificacion notificacion) {
+        if (notificacion != null) {
+            notificacion.marcarComoLeida();
+        }
     }
 
+    /**
+     * Elimina una notificación
+     */
+    public void eliminarNotificacion(Notificacion notificacion) {
+        if (notificacion != null) {
+            notificaciones.remove(notificacion);
+        }
+    }
+
+    /**
+     * Limpia todas las notificaciones
+     */
+    public void limpiarNotificaciones() {
+        notificaciones.clear();
+    }
+
+    /**
+     * Obtiene el total de notificaciones
+     */
+    public int contarTodasLasNotificaciones() {
+        return notificaciones.size();
+    }
+
+    // ============ RESPONSABILIDAD DE USUARIO ============
+    
     @Override
     public boolean esActivo() {
         return "ACTIVO".equals(estado);
     }
 
-    // Getters
+    // ============ GETTERS Y SETTERS ============
+    
     public List<Notificacion> getNotificacionesList() {
         return notificaciones;
     }
 
     public void setNotificaciones(List<Notificacion> notificaciones) {
         this.notificaciones = notificaciones;
+    }
+
+    /**
+     * Para validación de acceso
+     */
+    @Override
+    public String toString() {
+        return "JefaDepartamento{" +
+                "nombre='" + getNombresCompletos() + '\'' +
+                ", correo='" + correoInstitucional + '\'' +
+                ", estado='" + estado + '\'' +
+                ", notificacionesNoLeidas=" + contarNotificacionesNoLeidas() +
+                '}';
     }
 }
