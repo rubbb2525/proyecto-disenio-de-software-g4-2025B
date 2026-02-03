@@ -8,7 +8,8 @@ import java.nio.file.Paths;
 
 /**
  * Inicializador de la base de datos SQLite
- * Ejecuta el script SQL para crear tablas e insertar datos de prueba
+ * Ejecuta los scripts SQL para crear tablas e insertar datos de prueba
+ * Actualizado para incluir migración de asistentes y técnicos
  */
 public class InitBD {
     
@@ -28,16 +29,39 @@ public class InitBD {
             stmt.execute("PRAGMA foreign_keys = ON");
             stmt.close();
             
-            // Leer y ejecutar el script SQL
-            String scriptPath = "schema_bd.sql";
+            // 1. Ejecutar el script principal de schema
+            System.out.println("→ Ejecutando script principal (schema_bd.sql)...");
+            ejecutarScript(conn, "schema_bd.sql");
+            
+            // 2. Ejecutar el script de migración de asistentes y técnicos
+            System.out.println("\n→ Ejecutando script de migración (migracion_asistentes_tecnicos_sqlite.sql)...");
+            ejecutarScript(conn, "bd/migracion_asistentes_tecnicos_sqlite.sql");
+            
+            System.out.println("\n✓ Base de datos inicializada correctamente\n");
+            
+        } catch (Exception e) {
+            System.out.println("✗ Error al inicializar BD: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    /**
+     * Ejecuta un script SQL desde un archivo
+     * @param conn Conexión a la base de datos
+     * @param scriptPath Ruta del archivo SQL a ejecutar
+     */
+    private static void ejecutarScript(Connection conn, String scriptPath) {
+        try {
             String sqlScript = new String(Files.readAllBytes(Paths.get(scriptPath)));
             
             // Dividir por puntos y coma (simple parser)
             String[] statements = sqlScript.split(";");
             
-            stmt = conn.createStatement();
+            Statement stmt = conn.createStatement();
             int tablas = 0;
             int inserts = 0;
+            int vistas = 0;
+            int indices = 0;
             
             for (String statement : statements) {
                 String sql = statement.trim();
@@ -59,26 +83,32 @@ public class InitBD {
                 try {
                     stmt.execute(sql);
                     
-                    if (sql.toUpperCase().contains("CREATE TABLE")) {
+                    String sqlUpper = sql.toUpperCase();
+                    if (sqlUpper.contains("CREATE TABLE")) {
                         tablas++;
-                    } else if (sql.toUpperCase().contains("INSERT")) {
+                    } else if (sqlUpper.contains("INSERT")) {
                         inserts++;
+                    } else if (sqlUpper.contains("CREATE VIEW")) {
+                        vistas++;
+                    } else if (sqlUpper.contains("CREATE INDEX")) {
+                        indices++;
                     }
                 } catch (SQLException e) {
                     if (!e.getMessage().contains("already exists")) {
-                        System.out.println("⚠ Advertencia: " + e.getMessage());
+                        System.out.println("⚠ Advertencia en " + scriptPath + ": " + e.getMessage());
                     }
                 }
             }
             
             stmt.close();
             
-            System.out.println("✓ Tablas creadas: " + tablas);
-            System.out.println("✓ Registros insertados: " + inserts);
-            System.out.println("\n✓ Base de datos inicializada correctamente\n");
+            System.out.println("  ✓ Tablas creadas: " + tablas);
+            if (vistas > 0) System.out.println("  ✓ Vistas creadas: " + vistas);
+            if (indices > 0) System.out.println("  ✓ Índices creados: " + indices);
+            System.out.println("  ✓ Registros insertados: " + inserts);
             
         } catch (Exception e) {
-            System.out.println("✗ Error al inicializar BD: " + e.getMessage());
+            System.out.println("✗ Error al ejecutar " + scriptPath + ": " + e.getMessage());
             e.printStackTrace();
         }
     }
