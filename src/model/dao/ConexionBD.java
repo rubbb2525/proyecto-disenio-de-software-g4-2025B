@@ -3,6 +3,7 @@ package model.dao;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.sql.ResultSet;
 
 /**
  * Clase para gestionar la conexión a la base de datos SQLite
@@ -45,13 +46,52 @@ public class ConexionBD {
     }
 
     /**
-     * Inicializa las tablas si no existen
+     * Inicializa las tablas si no existen y aplica pequeñas migraciones necesarias
      */
     private void inicializarBaseDatos() {
         try (var statement = conexion.createStatement()) {
             // Habilitar claves foráneas en SQLite
             statement.execute("PRAGMA foreign_keys = ON");
             System.out.println("✓ Foreign keys habilitadas");
+
+            // Asegurar que la columna categoria_proyecto exista en las tablas relevantes
+            String[] tablas = {"proyectos", "ProyectoInvestigacion"};
+            for (String tabla : tablas) {
+                try (ResultSet rs = statement.executeQuery("PRAGMA table_info('" + tabla + "')")) {
+                    boolean found = false;
+                    while (rs.next()) {
+                        String name = rs.getString("name");
+                        if ("categoria_proyecto".equalsIgnoreCase(name)) {
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    if (!found) {
+                        try {
+                            statement.execute("ALTER TABLE " + tabla + " ADD COLUMN categoria_proyecto TEXT NOT NULL DEFAULT 'INVESTIGACION'");
+                            System.out.println("✓ Columna 'categoria_proyecto' agregada a tabla " + tabla);
+                        } catch (SQLException ex) {
+                            System.out.println("✗ No se pudo agregar columna 'categoria_proyecto' a " + tabla + " - " + ex.getMessage());
+                        }
+
+                        // Actualizar categorías basadas en tipo_proyecto para registros existentes
+                        try {
+                            String updateSql = "UPDATE " + tabla + " SET categoria_proyecto = CASE " +
+                                " WHEN tipo_proyecto IN ('VINCULACION_CON_FINANCIAMIENTO','VINCULACION') THEN 'VINCULACION' " +
+                                " WHEN tipo_proyecto IN ('TRANSFERENCIA','TRANSFERENCIA_TECNOLOGICA') THEN 'TRANSFERENCIA_TECNOLOGICA' " +
+                                " ELSE 'INVESTIGACION' END";
+                            statement.executeUpdate(updateSql);
+                            System.out.println("✓ Categorías actualizadas en " + tabla);
+                        } catch (SQLException ex2) {
+                            System.out.println("Aviso: no se pudo actualizar categorias para " + tabla + " - " + ex2.getMessage());
+                        }
+                    }
+                } catch (SQLException e) {
+                    // Tabla no existe en este esquema; ignorar
+                }
+            }
+
         } catch (SQLException e) {
             System.out.println("Error al inicializar BD: " + e.getMessage());
         }

@@ -3,6 +3,7 @@ package view;
 import controller.ControladorDirector;
 import model.ResultadoOperacion;
 import model.TipoProyecto;
+import model.CategoriaProyecto;
 import view.componentes.PlaceholderTextField;
 import view.componentes.StyledButton;
 import view.componentes.RoundedBorder;
@@ -35,6 +36,7 @@ public class DialogoFormularioProyecto extends JDialog {
     private JTextArea txtDescripcion;
     private JTextField txtFechaInicio;
     private JTextField txtFechaFin;
+    private JComboBox<CategoriaProyecto> cmbCategoriaProyecto;
     private JComboBox<TipoProyecto> cmbTipoProyecto;
     private JSpinner spnAyudantesPlanificados;
     
@@ -76,7 +78,7 @@ public class DialogoFormularioProyecto extends JDialog {
         header.setBackground(COLOR_PRIMARIO);
         header.setBorder(BorderFactory.createEmptyBorder(12, 14, 12, 14));
 
-        JLabel lblTitulo = new JLabel("Nuevo Proyecto de Investigación");
+        JLabel lblTitulo = new JLabel("Nuevo Proyecto");
         lblTitulo.setForeground(Color.WHITE);
         lblTitulo.setFont(new Font("Arial", Font.BOLD, 16));
         header.add(lblTitulo, BorderLayout.WEST);
@@ -141,7 +143,34 @@ public class DialogoFormularioProyecto extends JDialog {
         txtFechaFin.setFont(new Font("Arial", Font.PLAIN, 12));
         addField(form, gbc, "Fecha de Fin * (AAAA-MM-DD)", txtFechaFin);
 
-        // Tipo de proyecto
+        // Categoría del proyecto (niv. superior)
+        gbc.gridy++;
+        JLabel lblCategoria = new JLabel("Categoría de Proyecto *");
+        lblCategoria.setFont(new Font("Arial", Font.BOLD, 12));
+        lblCategoria.setForeground(COLOR_TEXTO);
+        form.add(lblCategoria, gbc);
+
+        gbc.gridx = 1;
+        gbc.weightx = 1.0;
+        cmbCategoriaProyecto = new JComboBox<>(CategoriaProyecto.values());
+        cmbCategoriaProyecto.setFont(new Font("Arial", Font.PLAIN, 12));
+        cmbCategoriaProyecto.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, 
+                                                         int index, boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value instanceof CategoriaProyecto) {
+                    setText(((CategoriaProyecto) value).getDescripcion());
+                }
+                return this;
+            }
+        });
+        form.add(cmbCategoriaProyecto, gbc);
+
+        gbc.gridx = 0;
+        gbc.weightx = 0;
+
+        // Tipo de proyecto (subtipo)
         gbc.gridy++;
         JLabel lblTipo = new JLabel("Tipo de Proyecto *");
         lblTipo.setFont(new Font("Arial", Font.BOLD, 12));
@@ -150,6 +179,7 @@ public class DialogoFormularioProyecto extends JDialog {
 
         gbc.gridx = 1;
         gbc.weightx = 1.0;
+        // Inicialmente listar todos los tipos de proyecto
         cmbTipoProyecto = new JComboBox<>(TipoProyecto.values());
         cmbTipoProyecto.setFont(new Font("Arial", Font.PLAIN, 12));
         cmbTipoProyecto.setRenderer(new DefaultListCellRenderer() {
@@ -164,6 +194,8 @@ public class DialogoFormularioProyecto extends JDialog {
             }
         });
         form.add(cmbTipoProyecto, gbc);
+
+        // Sincronizar seleccion de categoria -> tipos disponibles (ver configurarEventos)
 
         gbc.gridx = 0;
         gbc.weightx = 0;
@@ -250,6 +282,40 @@ public class DialogoFormularioProyecto extends JDialog {
             enterKey, 
             JComponent.WHEN_FOCUSED
         );
+
+        // Cuando cambia la categoría, actualizar los tipos disponibles
+        cmbCategoriaProyecto.addItemListener(e -> {
+            if (e.getStateChange() == java.awt.event.ItemEvent.SELECTED) {
+                CategoriaProyecto cat = (CategoriaProyecto) cmbCategoriaProyecto.getSelectedItem();
+                DefaultComboBoxModel<TipoProyecto> model;
+                if (cat == CategoriaProyecto.INVESTIGACION) {
+                    model = new DefaultComboBoxModel<>(new TipoProyecto[] {
+                        TipoProyecto.INTERNO,
+                        TipoProyecto.SEMILLA,
+                        TipoProyecto.GRUPAL,
+                        TipoProyecto.MULTIDISCIPLINARIO
+                    });
+                    cmbTipoProyecto.setModel(model);
+                    cmbTipoProyecto.setEnabled(true);
+                } else if (cat == CategoriaProyecto.VINCULACION) {
+                    model = new DefaultComboBoxModel<>(new TipoProyecto[] {
+                        TipoProyecto.VINCULACION_CON_FINANCIAMIENTO
+                    });
+                    cmbTipoProyecto.setModel(model);
+                    cmbTipoProyecto.setEnabled(false);
+                } else { // TRANSFERENCIA_TECNOLOGICA
+                    model = new DefaultComboBoxModel<>(new TipoProyecto[] {
+                        TipoProyecto.TRANSFERENCIA_TECNOLOGICA
+                    });
+                    cmbTipoProyecto.setModel(model);
+                    cmbTipoProyecto.setEnabled(false);
+                }
+            }
+        });
+
+        // Inicializar la selección por defecto
+        cmbCategoriaProyecto.setSelectedItem(CategoriaProyecto.INVESTIGACION);
+
     }
 
     private void guardarProyecto() {

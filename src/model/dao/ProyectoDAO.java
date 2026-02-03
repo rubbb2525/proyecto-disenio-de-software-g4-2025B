@@ -18,8 +18,8 @@ public class ProyectoDAO implements IDAO<ProyectoInvestigacion> {
     @Override
     public boolean guardar(ProyectoInvestigacion proyecto) {
         String sql = "INSERT INTO proyectos (codigo_proyecto, nombre_proyecto, descripcion, " +
-                     "fecha_inicio, fecha_fin, estado, tipo_proyecto, ayudantes_planificados, codigo_director) " +
-                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                     "fecha_inicio, fecha_fin, estado, categoria_proyecto, tipo_proyecto, ayudantes_planificados, codigo_director) " +
+                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
         try (PreparedStatement ps = conexion.prepareStatement(sql)) {
             ps.setString(1, proyecto.getCodigoProyecto());
@@ -28,9 +28,11 @@ public class ProyectoDAO implements IDAO<ProyectoInvestigacion> {
             ps.setTimestamp(4, new Timestamp(proyecto.getFechaInicio().getTime()));
             ps.setTimestamp(5, new Timestamp(proyecto.getFechaFin().getTime()));
             ps.setString(6, proyecto.getEstado());
-            ps.setString(7, proyecto.getTipoProyecto().name());
-            ps.setInt(8, proyecto.getAyudantesPlanificados());
-            ps.setString(9, proyecto.getDirector() != null ? proyecto.getDirector().getCodigoUnico() : null);
+            // Guardar la categoría principal derivada del tipo
+            ps.setString(7, proyecto.getTipoProyecto() != null ? proyecto.getTipoProyecto().getCategoria().name() : null);
+            ps.setString(8, proyecto.getTipoProyecto() != null ? proyecto.getTipoProyecto().name() : null);
+            ps.setInt(9, proyecto.getAyudantesPlanificados());
+            ps.setString(10, proyecto.getDirector() != null ? proyecto.getDirector().getCodigoUnico() : null);
             
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
@@ -112,7 +114,7 @@ public class ProyectoDAO implements IDAO<ProyectoInvestigacion> {
     @Override
     public boolean actualizar(ProyectoInvestigacion proyecto) {
         String sql = "UPDATE proyectos SET nombre_proyecto = ?, descripcion = ?, " +
-                     "fecha_inicio = ?, fecha_fin = ?, estado = ?, tipo_proyecto = ?, " +
+                     "fecha_inicio = ?, fecha_fin = ?, estado = ?, categoria_proyecto = ?, tipo_proyecto = ?, " +
                      "ayudantes_planificados = ?, codigo_director = ? WHERE codigo_proyecto = ?";
         
         try (PreparedStatement ps = conexion.prepareStatement(sql)) {
@@ -121,10 +123,11 @@ public class ProyectoDAO implements IDAO<ProyectoInvestigacion> {
             ps.setTimestamp(3, new Timestamp(proyecto.getFechaInicio().getTime()));
             ps.setTimestamp(4, new Timestamp(proyecto.getFechaFin().getTime()));
             ps.setString(5, proyecto.getEstado());
-            ps.setString(6, proyecto.getTipoProyecto().name());
-            ps.setInt(7, proyecto.getAyudantesPlanificados());
-            ps.setString(8, proyecto.getDirector() != null ? proyecto.getDirector().getCodigoUnico() : null);
-            ps.setString(9, proyecto.getCodigoProyecto());
+            ps.setString(6, proyecto.getTipoProyecto() != null ? proyecto.getTipoProyecto().getCategoria().name() : null);
+            ps.setString(7, proyecto.getTipoProyecto() != null ? proyecto.getTipoProyecto().name() : null);
+            ps.setInt(8, proyecto.getAyudantesPlanificados());
+            ps.setString(9, proyecto.getDirector() != null ? proyecto.getDirector().getCodigoUnico() : null);
+            ps.setString(10, proyecto.getCodigoProyecto());
             
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
@@ -163,7 +166,12 @@ public class ProyectoDAO implements IDAO<ProyectoInvestigacion> {
         }
 
         proyecto.setEstado(rs.getString("estado"));
-        proyecto.setTipoProyecto(parseTipoProyecto(rs.getString("tipo_proyecto")));
+        // Si la BD contiene categoría explícita la usamos para consistencia (aunque el tipo también define la categoría)
+        String categoriaStr = null;
+        try {
+            categoriaStr = rs.getString("categoria_proyecto");
+        } catch (SQLException ignored) { }
+        proyecto.setTipoProyecto(parseTipoProyecto(rs.getString("tipo_proyecto"), categoriaStr));
         proyecto.setAyudantesPlanificados(rs.getInt("ayudantes_planificados"));
         
         return proyecto;
@@ -186,7 +194,23 @@ public class ProyectoDAO implements IDAO<ProyectoInvestigacion> {
     }
 
     // Normaliza valores leídos de BD a los enums definidos
-    private TipoProyecto parseTipoProyecto(String valor) {
+    private TipoProyecto parseTipoProyecto(String valor, String categoriaOpt) {
+        if (valor == null && categoriaOpt != null) {
+            // Si no hay tipo pero sí categoría, inferir un valor por categoría
+            String c = categoriaOpt.trim().toUpperCase();
+            switch (c) {
+                case "VINCULACION":
+                case "VINCULACION_CON_FINANCIAMIENTO":
+                    return TipoProyecto.VINCULACION_CON_FINANCIAMIENTO;
+                case "TRANSFERENCIA_TECNOLOGICA":
+                case "TRANSFERENCIA":
+                    return TipoProyecto.TRANSFERENCIA_TECNOLOGICA;
+                case "INVESTIGACION":
+                default:
+                    return TipoProyecto.INTERNO;
+            }
+        }
+
         if (valor == null) {
             return TipoProyecto.INTERNO;
         }
@@ -194,11 +218,14 @@ public class ProyectoDAO implements IDAO<ProyectoInvestigacion> {
         switch (v) {
             case "GRUPAL":
             case "GRUPALES":
-                return TipoProyecto.GRUPALES;
+                return TipoProyecto.GRUPAL;
+            case "MULTIDISCIPLINARIO":
+                return TipoProyecto.MULTIDISCIPLINARIO;
             case "TRANSFERENCIA":
             case "TRANSFERENCIA_TECNOLOGICA":
                 return TipoProyecto.TRANSFERENCIA_TECNOLOGICA;
             case "VINCULACION_CON_FINANCIAMIENTO":
+            case "VINCULACION":
                 return TipoProyecto.VINCULACION_CON_FINANCIAMIENTO;
             case "SEMILLA":
                 return TipoProyecto.SEMILLA;
