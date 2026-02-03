@@ -15,6 +15,8 @@ import view.componentes.PanelEstadistica;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.util.Date;
+import model.AsistenteInvestigacion;
+import model.TecnicoInvestigacion;
 
 /**
  * Ventana principal del Director
@@ -159,9 +161,9 @@ public class VistaDirector extends JFrame {
         // Botonera
         JPanel acciones = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         acciones.setBackground(COLOR_FONDO);
-        btnRegistrar = new StyledButton("Registrar", StyledButton.TipoBoton.PRIMARIO);
+        btnRegistrar = new StyledButton("Realizar Contratación", StyledButton.TipoBoton.PRIMARIO);
         btnRegistrar.setIcon(IconManager.getInstance().getIcon("add.svg", 16));
-        btnRegistrar.setToolTipText("Registrar nuevo ayudante (Ctrl+N)");
+        btnRegistrar.setToolTipText("Realizar nueva contratación (Ctrl+N)");
         btnDarBaja = new StyledButton("Dar de baja", StyledButton.TipoBoton.PELIGRO);
         btnDarBaja.setIcon(IconManager.getInstance().getIcon("delete.svg", 16));
         btnDarBaja.setToolTipText("Dar de baja ayudante seleccionado (Supr)");
@@ -224,10 +226,10 @@ public class VistaDirector extends JFrame {
         btnDarBaja.addActionListener(e -> darDeBajaAyudante());
 
         btnRegistrar.addActionListener(e -> {
-            DialogoFormularioAyudante dialogo = new DialogoFormularioAyudante(this, controlador);
+            DialogoSeleccionContratacion dialogo = new DialogoSeleccionContratacion(this, controlador);
             dialogo.setVisible(true);
             if (dialogo.seGuardo()) {
-                ToastMessage.mostrar(this, "Ayudante registrado exitosamente", ToastMessage.TipoToast.EXITO);
+                ToastMessage.mostrar(this, "Contratación realizada exitosamente", ToastMessage.TipoToast.EXITO);
                 cargarDatos();
             }
         });

@@ -16,6 +16,9 @@ public class App {
     private static AyudanteDAO ayudanteDAO;
     private static EstudianteDAO estudianteDAO;
     private static ProyectoDAO proyectoDAO;
+    private static TecnicoDAO tecnicoDAO;
+    private static AsistenteDAO asistenteDAO;
+
     private static ControladorAutenticacion controladorAuth;
     private static VistaLogin vistaLogin;
     private static VistaDirector vistaDirector;
@@ -58,9 +61,12 @@ public class App {
         ayudanteDAO = new AyudanteDAO();
         estudianteDAO = new EstudianteDAO();
         proyectoDAO = new ProyectoDAO();
-        
+        tecnicoDAO = new TecnicoDAO();
+        asistenteDAO = new AsistenteDAO();
+
         System.out.println("✓ DAOs inicializados correctamente");
     }
+
 
     public static void navegarSegunRol(String rol) {
         vistaLogin.cerrar();
@@ -109,12 +115,15 @@ public class App {
 
         // Crear controlador del director
         ControladorDirector ctrlDirector = new ControladorDirector(
-            director, 
-            ayudanteDAO, 
-            estudianteDAO, 
-            proyectoDAO
-        );
-        
+        director,
+        ayudanteDAO,
+        asistenteDAO,
+        tecnicoDAO,
+        estudianteDAO,
+        proyectoDAO
+    );
+
+    
         // Mostrar vista
         vistaDirector = new VistaDirector(ctrlDirector);
         vistaDirector.setVisible(true);

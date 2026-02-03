@@ -22,24 +22,31 @@ public class ControladorDirector {
     private ProyectoDAO proyectoDAO;
     private NotificacionDAO notificacionDAO;
     private JefaDepartamento jefaDepartamento;
-    
+    private TecnicoDAO tecnicoDAO;
+    private AsistenteDAO asistenteDAO;
+
     // INYECCIÓN DE SERVICIOS
     private ServicioConversionAyudante servicioConversion;
     private ServicioDeFiltrado servicioDeFiltrado;
     private ServicioDeEstadisticas servicioEstadisticas;
 
-    public ControladorDirector(Director director, AyudanteDAO ayudanteDAO, 
-                              EstudianteDAO estudianteDAO, ProyectoDAO proyectoDAO) {
+    public ControladorDirector(
+        Director director,
+        AyudanteDAO ayudanteDAO,
+        AsistenteDAO asistenteDAO,
+        TecnicoDAO tecnicoDAO,
+        EstudianteDAO estudianteDAO,
+        ProyectoDAO proyectoDAO
+) {
         this.directorActual = director;
         this.ayudanteDAO = ayudanteDAO;
+        this.asistenteDAO = asistenteDAO;
+        this.tecnicoDAO = tecnicoDAO;
         this.estudianteDAO = estudianteDAO;
         this.proyectoDAO = proyectoDAO;
+
         this.notificacionDAO = new NotificacionDAO();
         this.jefaDepartamento = JefaDepartamento.getInstancia();
-        
-        // Inicializar servicios (son clases utilitarias, no instancias)
-        // ServicioDeFiltrado, ServicioConversion y ServicioDeEstadisticas 
-        // tienen métodos estáticos
     }
 
     /**
@@ -71,7 +78,7 @@ public class ControladorDirector {
      */
     public ResultadoOperacion registrarAyudante(String codigoEstudiante, int horas, double salario) {
         ResultadoOperacion resultado = new ResultadoOperacion();
-
+        
         // Obtener proyecto del director
         ProyectoInvestigacion proyecto = obtenerProyectoDelDirector();
         if (proyecto == null) {
@@ -186,6 +193,100 @@ public class ControladorDirector {
 
         return resultado;
     }
+
+    public ResultadoOperacion registrarAsistente(
+        String codigoEstudiante,
+        int horas,
+        double salario,
+        String tituloAcademico,
+        String areaEspecializacion
+) {
+
+    ResultadoOperacion resultado = new ResultadoOperacion();
+
+    ProyectoInvestigacion proyecto = obtenerProyectoDelDirector();
+    if (proyecto == null) {
+        resultado.setMensaje("Director sin proyecto asignado");
+        return resultado;
+    }
+
+    Estudiante estudiante = buscarEstudiante(codigoEstudiante);
+    if (estudiante == null) {
+        resultado.setMensaje("Estudiante no encontrado");
+        return resultado;
+    }
+
+    if (!ServicioConversionAsistente.puedeConvertirse(
+            estudiante, horas, salario, tituloAcademico, areaEspecializacion)) {
+
+        resultado.setMensaje(
+            ServicioConversionAsistente.obtenerMensajeError(
+                estudiante, horas, salario, tituloAcademico, areaEspecializacion
+            )
+        );
+        return resultado;
+    }
+
+    AsistenteInvestigacion asistente =
+        ServicioConversionAsistente.convertirEstudianteAAsistente(
+            estudiante, proyecto, horas, salario,
+            tituloAcademico, areaEspecializacion
+        );
+
+    if (!asistenteDAO.guardar(asistente)) {
+        resultado.setMensaje("Error al guardar asistente en BD");
+        return resultado;
+    }
+
+    Notificacion notif = new Notificacion(
+        "NOT_" + System.currentTimeMillis(),
+        "Nuevo asistente registrado: " + asistente.getNombresCompletos(),
+        "REGISTRO_ASISTENTE"
+    );
+    notif.setProyectoRelacionado(proyecto);
+    notificacionDAO.guardar(notif);
+    jefaDepartamento.recibirNotificacion(notif);
+
+    resultado.setExitoso(true);
+    resultado.setMensaje("Asistente registrado exitosamente");
+
+    return resultado;
+}
+
+public ResultadoOperacion registrarTecnico(TecnicoInvestigacion tecnico) {
+
+    ResultadoOperacion resultado = new ResultadoOperacion();
+
+    ProyectoInvestigacion proyecto = obtenerProyectoDelDirector();
+    if (proyecto == null) {
+        resultado.setMensaje("Director sin proyecto asignado");
+        return resultado;
+    }
+
+    tecnico.setProyectoAsignado(proyecto);
+    tecnico.setEstado("ACTIVO");
+
+    if (!tecnicoDAO.guardar(tecnico)) {
+        resultado.setMensaje("Error al guardar técnico en BD");
+        return resultado;
+    }
+
+    Notificacion notif = new Notificacion(
+        "NOT_" + System.currentTimeMillis(),
+        "Nuevo técnico registrado: " + tecnico.getNombres(),
+        "REGISTRO_TECNICO"
+    );
+    notif.setProyectoRelacionado(proyecto);
+
+    notificacionDAO.guardar(notif);
+    jefaDepartamento.recibirNotificacion(notif);
+
+    resultado.setExitoso(true);
+    resultado.setMensaje("Técnico registrado exitosamente");
+
+    return resultado;
+}
+
 
     /**
      * Consulta los ayudantes del proyecto
