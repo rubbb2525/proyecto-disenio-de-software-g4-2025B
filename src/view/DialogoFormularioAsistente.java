@@ -12,8 +12,7 @@ import java.awt.*;
 
 /**
  * Diálogo de registro de Asistente de Investigación
- * CORREGIDO: Incluye campos de título académico y área de especialización
- * CORREGIDO: Llama a controlador.registrarAsistente() en lugar de registrarAyudante()
+ * Formulario siempre visible. Si no se encuentra el estudiante, abre una ventana emergente separada.
  */
 public class DialogoFormularioAsistente extends JDialog {
     private final ControladorDirector controlador;
@@ -50,7 +49,7 @@ public class DialogoFormularioAsistente extends JDialog {
     }
 
     private void initUI() {
-        setSize(520, 740);  // AUMENTADO para incluir campos adicionales
+        setSize(520, 740);
         setLocationRelativeTo(getParent());
         setLayout(new BorderLayout(0, 12));
 
@@ -194,7 +193,23 @@ public class DialogoFormularioAsistente extends JDialog {
         if (e == null) {
             lblEstadoBusqueda.setText("✗ Estudiante no encontrado");
             lblEstadoBusqueda.setForeground(new Color(220, 53, 69));
-            limpiarFormulario();
+            
+            // Abrir ventana emergente de "No registrado"
+            DialogoEstudianteNoRegistrado dialogo = new DialogoEstudianteNoRegistrado(
+                (Frame) SwingUtilities.getWindowAncestor(this),
+                controlador,
+                "asistente"
+            );
+            dialogo.setVisible(true);
+            
+            // Si se registró el estudiante en la ventana emergente, intentar buscarlo nuevamente
+            Estudiante estudianteNuevo = controlador.buscarEstudiante(criterio);
+            if (estudianteNuevo != null) {
+                estudianteSeleccionado = estudianteNuevo;
+                llenarFormulario(estudianteNuevo);
+                lblEstadoBusqueda.setText("✓ Estudiante encontrado");
+                lblEstadoBusqueda.setForeground(new Color(40, 167, 69));
+            }
         } else {
             lblEstadoBusqueda.setText("✓ Estudiante encontrado");
             lblEstadoBusqueda.setForeground(new Color(40, 167, 69));
@@ -275,7 +290,6 @@ public class DialogoFormularioAsistente extends JDialog {
             return;
         }
         
-        // CORREGIDO: Llamar a registrarAsistente() con TODOS los parámetros
         ResultadoOperacion res = controlador.registrarAsistente(
             estudianteSeleccionado.getCodigoUnico(), 
             horas, 

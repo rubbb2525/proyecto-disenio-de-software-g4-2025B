@@ -12,6 +12,7 @@ import java.awt.*;
 
 /**
  * Diálogo de registro de ayudante con búsqueda de estudiante y captura de horas/salario.
+ * Formulario siempre visible con scrollbar. Si no se encuentra, abre una ventana emergente separada.
  */
 public class DialogoFormularioAyudante extends JDialog {
     private final ControladorDirector controlador;
@@ -54,6 +55,7 @@ public class DialogoFormularioAyudante extends JDialog {
         content.add(crearFormulario(), BorderLayout.CENTER);
         content.add(crearBotonera(), BorderLayout.SOUTH);
 
+        // Agregar scroll al contenido principal
         add(new JScrollPane(content), BorderLayout.CENTER);
         configurarEventos();
     }
@@ -133,16 +135,7 @@ public class DialogoFormularioAyudante extends JDialog {
     }
 
     private void configurarEventos() {
-        // Búsqueda en vivo al escribir
-        txtBusqueda.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-            @Override
-            public void insertUpdate(javax.swing.event.DocumentEvent e) { buscar(); }
-            @Override
-            public void removeUpdate(javax.swing.event.DocumentEvent e) { buscar(); }
-            @Override
-            public void changedUpdate(javax.swing.event.DocumentEvent e) { }
-        });
-        
+        // Solo buscar cuando se presiona Enter en el campo o se hace clic en el botón
         btnBuscar.addActionListener(e -> buscar());
         txtBusqueda.addActionListener(e -> buscar());
 
@@ -162,12 +155,30 @@ public class DialogoFormularioAyudante extends JDialog {
             estudianteSeleccionado = null;
             return;
         }
+        
         Estudiante est = controlador.buscarEstudiante(criterio);
         if (est == null) {
             lblEstadoBusqueda.setText("✗ Estudiante no registrado");
             lblEstadoBusqueda.setForeground(new Color(192, 57, 43));
             limpiarCampos();
-            estudianteSeleccionado = null;
+            
+            // Abrir ventana emergente de "No registrado"
+            DialogoEstudianteNoRegistrado dialogo = new DialogoEstudianteNoRegistrado(
+                (Frame) SwingUtilities.getWindowAncestor(this),
+                controlador,
+                "ayudante"
+            );
+            dialogo.setVisible(true);
+            
+            // Si se registró el estudiante en la ventana emergente, intentar buscarlo nuevamente
+            Estudiante estudianteNuevo = controlador.buscarEstudiante(criterio);
+            if (estudianteNuevo != null) {
+                est = estudianteNuevo;
+                lblEstadoBusqueda.setText("✓ Estudiante registrado");
+                lblEstadoBusqueda.setForeground(new Color(39, 174, 96));
+                estudianteSeleccionado = est;
+                poblarDatos(est);
+            }
             return;
         }
         

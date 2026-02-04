@@ -122,7 +122,7 @@ public class InitBD {
         if (conn == null) return false;
         
         try {
-            var rs = conn.getMetaData().getTables(null, null, "miembros_epn", null);
+            java.sql.ResultSet rs = conn.getMetaData().getTables(null, null, "miembros_epn", null);
             return rs.next();
         } catch (SQLException e) {
             return false;
