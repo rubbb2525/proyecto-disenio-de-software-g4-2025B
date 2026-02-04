@@ -676,7 +676,7 @@ public class VistaDirector extends JFrame {
         }
         
         procesarBaja(seleccionado.getNombresCompletos(), 
-                    () -> controlador.darDeBajaAyudante(seleccionado.getCodigoUnico(), null, new Date()));
+                    (motivo) -> controlador.darDeBajaAyudante(seleccionado.getCodigoUnico(), motivo, new Date()));
     }
     
     private void darDeBajaAsistente() {
@@ -687,7 +687,7 @@ public class VistaDirector extends JFrame {
         }
         
         procesarBaja(seleccionado.getNombresCompletos(), 
-                    () -> seleccionado.darDeBaja(null, new Date()));
+                    (motivo) -> seleccionado.darDeBaja(motivo, new Date()));
     }
     
     private void darDeBajaTecnico() {
@@ -698,10 +698,10 @@ public class VistaDirector extends JFrame {
         }
         
         procesarBaja(seleccionado.getNombresCompletos(), 
-                    () -> seleccionado.darDeBaja(null, new Date()));
+                    (motivo) -> seleccionado.darDeBaja(motivo, new Date()));
     }
     
-    private void procesarBaja(String nombre, java.util.function.Supplier<ResultadoOperacion> operacionBaja) {
+    private void procesarBaja(String nombre, java.util.function.Function<String, ResultadoOperacion> operacionBaja) {
         String[] motivos = {"FIN_CONTRATO", "RETIRO_VOLUNTARIO", "FUERZA_MAYOR"};
         String motivoSeleccionado = (String) JOptionPane.showInputDialog(
             this,
@@ -720,7 +720,7 @@ public class VistaDirector extends JFrame {
         dialogo.setVisible(true);
         if (!dialogo.esConfirmado()) return;
             
-        var res = operacionBaja.get();
+        var res = operacionBaja.apply(motivoSeleccionado);
         if (res.esExitoso()) {
             ToastMessage.mostrar(this, res.getMensaje(), ToastMessage.TipoToast.EXITO);
             cargarDatos();

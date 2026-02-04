@@ -21,7 +21,7 @@ public class ServicioDeReportes {
     public static Reporte generarReporteGeneral(List<Proyectos> proyectos, List<Ayudante> ayudantes) {
         Reporte reporte = new Reporte("RPT-GENERAL-" + System.currentTimeMillis(), 
                                      "GENERAL", 
-                                     "Reporte General del Sistema");
+                                     "REPORTE GENERAL DEL SISTEMA");
         reporte.setFechaGeneracion(new Date());
 
         // Calcular estadísticas completas
@@ -82,6 +82,10 @@ public class ServicioDeReportes {
         contenido.append(" proyectos de investigación con participación de ayudantes.\n");
 
         reporte.setContenido(contenido.toString());
+        
+        // Incluir lista de ayudantes para tabla en PDF
+        reporte.setAyudantes(ayudantes);
+        
         return reporte;
     }
 
