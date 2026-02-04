@@ -227,7 +227,7 @@ public class TecnicoDAO implements IDAO<TecnicoInvestigacion> {
         if (codigoProyecto != null && !codigoProyecto.isBlank()) {
             try {
                 ProyectoDAO proyectoDAO = new ProyectoDAO();
-                ProyectoInvestigacion proyecto = proyectoDAO.buscarPorId(codigoProyecto);
+                Proyectos proyecto = proyectoDAO.buscarPorId(codigoProyecto);
                 tecnico.setProyectoAsignado(proyecto);
             } catch (Exception ignored) {}
         }

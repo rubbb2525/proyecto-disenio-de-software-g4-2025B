@@ -6,9 +6,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * DAO para operaciones CRUD de ProyectoInvestigacion
+ * DAO para operaciones CRUD de Proyectos
  */
-public class ProyectoDAO implements IDAO<ProyectoInvestigacion> {
+public class ProyectoDAO implements IDAO<Proyectos> {
     private Connection conexion;
 
     public ProyectoDAO() {
@@ -16,7 +16,7 @@ public class ProyectoDAO implements IDAO<ProyectoInvestigacion> {
     }
 
     @Override
-    public boolean guardar(ProyectoInvestigacion proyecto) {
+    public boolean guardar(Proyectos proyecto) {
         String sql = "INSERT INTO proyectos (codigo_proyecto, nombre_proyecto, descripcion, " +
                      "fecha_inicio, fecha_fin, estado, categoria_proyecto, tipo_proyecto, ayudantes_planificados, codigo_director) " +
                      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
@@ -42,7 +42,7 @@ public class ProyectoDAO implements IDAO<ProyectoInvestigacion> {
     }
 
     @Override
-    public ProyectoInvestigacion buscarPorId(String id) {
+    public Proyectos buscarPorId(String id) {
         String sql = "SELECT * FROM proyectos WHERE codigo_proyecto = ?";
         
         try (PreparedStatement ps = conexion.prepareStatement(sql)) {
@@ -58,7 +58,7 @@ public class ProyectoDAO implements IDAO<ProyectoInvestigacion> {
         return null;
     }
 
-    public ProyectoInvestigacion buscarPorDirector(String codigoUnico) {
+    public Proyectos buscarPorDirector(String codigoUnico) {
         String sql = "SELECT * FROM proyectos WHERE codigo_director = ?";
         
         try (PreparedStatement ps = conexion.prepareStatement(sql)) {
@@ -74,8 +74,8 @@ public class ProyectoDAO implements IDAO<ProyectoInvestigacion> {
         return null;
     }
 
-    public List<ProyectoInvestigacion> buscarActivos() {
-        List<ProyectoInvestigacion> proyectos = new ArrayList<>();
+    public List<Proyectos> buscarActivos() {
+        List<Proyectos> proyectos = new ArrayList<>();
         String sql = "SELECT * FROM proyectos WHERE estado = 'ACTIVO'";
         
         try (Statement st = conexion.createStatement()) {
@@ -90,13 +90,13 @@ public class ProyectoDAO implements IDAO<ProyectoInvestigacion> {
         return proyectos;
     }
 
-    public ProyectoInvestigacion buscarPorCodigo(String codigo) {
+    public Proyectos buscarPorCodigo(String codigo) {
         return buscarPorId(codigo);
     }
 
     @Override
-    public List<ProyectoInvestigacion> listarTodos() {
-        List<ProyectoInvestigacion> proyectos = new ArrayList<>();
+    public List<Proyectos> listarTodos() {
+        List<Proyectos> proyectos = new ArrayList<>();
         String sql = "SELECT * FROM proyectos";
         
         try (Statement st = conexion.createStatement()) {
@@ -112,7 +112,7 @@ public class ProyectoDAO implements IDAO<ProyectoInvestigacion> {
     }
 
     @Override
-    public boolean actualizar(ProyectoInvestigacion proyecto) {
+    public boolean actualizar(Proyectos proyecto) {
         String sql = "UPDATE proyectos SET nombre_proyecto = ?, descripcion = ?, " +
                      "fecha_inicio = ?, fecha_fin = ?, estado = ?, categoria_proyecto = ?, tipo_proyecto = ?, " +
                      "ayudantes_planificados = ?, codigo_director = ? WHERE codigo_proyecto = ?";
@@ -149,8 +149,8 @@ public class ProyectoDAO implements IDAO<ProyectoInvestigacion> {
         }
     }
 
-    private ProyectoInvestigacion mapearProyecto(ResultSet rs) throws SQLException {
-        ProyectoInvestigacion proyecto = new ProyectoInvestigacion();
+    private Proyectos mapearProyecto(ResultSet rs) throws SQLException {
+        Proyectos proyecto = new Proyectos();
         proyecto.setCodigoProyecto(rs.getString("codigo_proyecto"));
         proyecto.setNombreProyecto(rs.getString("nombre_proyecto"));
         proyecto.setDescripcion(rs.getString("descripcion"));

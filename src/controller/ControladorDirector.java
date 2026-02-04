@@ -54,7 +54,7 @@ public class ControladorDirector {
      * Antes: director.getProyectoAsignado() (podía ser null)
      * Ahora: Se obtiene cuando se necesita via DAO
      */
-    public ProyectoInvestigacion obtenerProyectoDelDirector() {
+    public Proyectos obtenerProyectoDelDirector() {
         return proyectoDAO.buscarPorDirector(directorActual.getCodigoUnico());
     }
 
@@ -80,7 +80,7 @@ public class ControladorDirector {
         ResultadoOperacion resultado = new ResultadoOperacion();
         
         // Obtener proyecto del director
-        ProyectoInvestigacion proyecto = obtenerProyectoDelDirector();
+        Proyectos proyecto = obtenerProyectoDelDirector();
         if (proyecto == null) {
             resultado.setMensaje("Director sin proyecto asignado");
             resultado.agregarError("Proyecto no disponible");
@@ -204,7 +204,7 @@ public class ControladorDirector {
 
     ResultadoOperacion resultado = new ResultadoOperacion();
 
-    ProyectoInvestigacion proyecto = obtenerProyectoDelDirector();
+    Proyectos proyecto = obtenerProyectoDelDirector();
     if (proyecto == null) {
         resultado.setMensaje("Director sin proyecto asignado");
         return resultado;
@@ -257,7 +257,7 @@ public ResultadoOperacion registrarTecnico(TecnicoInvestigacion tecnico) {
 
     ResultadoOperacion resultado = new ResultadoOperacion();
 
-    ProyectoInvestigacion proyecto = obtenerProyectoDelDirector();
+    Proyectos proyecto = obtenerProyectoDelDirector();
     if (proyecto == null) {
         resultado.setMensaje("Director sin proyecto asignado");
         return resultado;
@@ -295,7 +295,7 @@ public ResultadoOperacion registrarTecnico(TecnicoInvestigacion tecnico) {
      * - Obtiene proyecto via método (no como atributo)
      */
     public List<Ayudante> consultarAyudantesDelProyecto() {
-        ProyectoInvestigacion proyecto = obtenerProyectoDelDirector();
+        Proyectos proyecto = obtenerProyectoDelDirector();
         if (proyecto == null) {
             return null;
         }
@@ -338,7 +338,7 @@ public ResultadoOperacion registrarTecnico(TecnicoInvestigacion tecnico) {
     /**
      * Obtiene el proyecto del director (usando lazy loading)
      */
-    public ProyectoInvestigacion getProyecto() {
+    public Proyectos getProyecto() {
         return obtenerProyectoDelDirector();
     }
 
@@ -346,7 +346,7 @@ public ResultadoOperacion registrarTecnico(TecnicoInvestigacion tecnico) {
      * NUEVO: Obtiene información del proyecto (nombre, descripción, etc)
      */
     public String obtenerNombreProyecto() {
-        ProyectoInvestigacion proyecto = obtenerProyectoDelDirector();
+        Proyectos proyecto = obtenerProyectoDelDirector();
         if (proyecto == null) {
             return "Sin proyecto asignado";
         }
@@ -357,7 +357,7 @@ public ResultadoOperacion registrarTecnico(TecnicoInvestigacion tecnico) {
      * NUEVO: Obtiene cupos disponibles en el proyecto
      */
     public int obtenerCuposDisponibles() {
-        ProyectoInvestigacion proyecto = obtenerProyectoDelDirector();
+        Proyectos proyecto = obtenerProyectoDelDirector();
         if (proyecto == null) {
             return 0;
         }
@@ -368,7 +368,7 @@ public ResultadoOperacion registrarTecnico(TecnicoInvestigacion tecnico) {
      * NUEVO: Verifica si hay cupo disponible
      */
     public boolean hayCapoDisponible() {
-        ProyectoInvestigacion proyecto = obtenerProyectoDelDirector();
+        Proyectos proyecto = obtenerProyectoDelDirector();
         if (proyecto == null) {
             return false;
         }
@@ -399,7 +399,7 @@ public ResultadoOperacion registrarTecnico(TecnicoInvestigacion tecnico) {
         ResultadoOperacion resultado = new ResultadoOperacion();
 
         // Validar que el director no tenga ya un proyecto activo
-        ProyectoInvestigacion proyectoExistente = obtenerProyectoDelDirector();
+        Proyectos proyectoExistente = obtenerProyectoDelDirector();
         if (proyectoExistente != null && "ACTIVO".equals(proyectoExistente.getEstado())) {
             resultado.setMensaje("El director ya tiene un proyecto activo");
             resultado.agregarError("No se puede crear más de un proyecto activo simultáneamente");
@@ -414,7 +414,7 @@ public ResultadoOperacion registrarTecnico(TecnicoInvestigacion tecnico) {
         }
 
         // Validar que el código no esté duplicado
-        ProyectoInvestigacion proyectoDuplicado = proyectoDAO.buscarPorCodigo(codigoProyecto);
+        Proyectos proyectoDuplicado = proyectoDAO.buscarPorCodigo(codigoProyecto);
         if (proyectoDuplicado != null) {
             resultado.setMensaje("El código de proyecto ya existe");
             resultado.agregarError("Código duplicado: " + codigoProyecto);
@@ -462,7 +462,7 @@ public ResultadoOperacion registrarTecnico(TecnicoInvestigacion tecnico) {
         }
 
         // Crear el proyecto
-        ProyectoInvestigacion nuevoProyecto = new ProyectoInvestigacion(
+        Proyectos nuevoProyecto = new Proyectos(
             codigoProyecto,
             nombreProyecto,
             descripcion,
@@ -511,7 +511,7 @@ public ResultadoOperacion registrarTecnico(TecnicoInvestigacion tecnico) {
      * @return true si el director no tiene proyecto activo, false en caso contrario
      */
     public boolean puedeCrearProyecto() {
-        ProyectoInvestigacion proyectoExistente = obtenerProyectoDelDirector();
+        Proyectos proyectoExistente = obtenerProyectoDelDirector();
         return proyectoExistente == null || !"ACTIVO".equals(proyectoExistente.getEstado());
     }
 }

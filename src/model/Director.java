@@ -45,7 +45,7 @@ public class Director extends MiembroEPN {
      * Ejemplo de uso en controlador:
      * 
      * Director director = new Director(...)
-     * ProyectoInvestigacion proyecto = 
+     * Proyectos proyecto = 
      *     proyectoDAO.buscarPorDirector(director.getCodigoUnico());
      * 
      * if (proyecto != null) {

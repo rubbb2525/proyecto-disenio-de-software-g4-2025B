@@ -12,7 +12,7 @@ public class Ayudante extends MiembroEPN {
     private Date fechaRegistro;
     private Date fechaFinalizacion;
     private String motivoSalida;
-    private ProyectoInvestigacion proyectoAsignado;
+    private Proyectos proyectoAsignado;
     private int horasSemanales;
     private double salarioMensual;
 
@@ -110,11 +110,11 @@ public class Ayudante extends MiembroEPN {
         this.motivoSalida = motivoSalida;
     }
 
-    public ProyectoInvestigacion getProyectoAsignado() {
+    public Proyectos getProyectoAsignado() {
         return proyectoAsignado;
     }
 
-    public void setProyectoAsignado(ProyectoInvestigacion proyectoAsignado) {
+    public void setProyectoAsignado(Proyectos proyectoAsignado) {
         this.proyectoAsignado = proyectoAsignado;
     }
 

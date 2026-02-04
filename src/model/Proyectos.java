@@ -7,7 +7,7 @@ import java.util.List;
 /**
  * Representa un proyecto de investigación
  */
-public class ProyectoInvestigacion {
+public class Proyectos {
     private String codigoProyecto;
     private String nombreProyecto;
     private String descripcion;
@@ -19,11 +19,11 @@ public class ProyectoInvestigacion {
     private List<Ayudante> ayudantes;
     private Director director;
 
-    public ProyectoInvestigacion() {
+    public Proyectos() {
         this.ayudantes = new ArrayList<>();
     }
 
-    public ProyectoInvestigacion(String codigoProyecto, String nombreProyecto, String descripcion,
+    public Proyectos(String codigoProyecto, String nombreProyecto, String descripcion,
                                 Date fechaInicio, Date fechaFin, String estado,
                                 TipoProyecto tipoProyecto, int ayudantesPlanificados) {
         this.codigoProyecto = codigoProyecto;

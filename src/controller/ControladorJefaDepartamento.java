@@ -95,7 +95,7 @@ public class ControladorJefaDepartamento {
     /**
      * Obtiene todos los proyectos
      */
-    public List<ProyectoInvestigacion> obtenerTodosProyectos() {
+    public List<Proyectos> obtenerTodosProyectos() {
         return proyectoDAO.listarTodos();
     }
 
@@ -132,8 +132,8 @@ public class ControladorJefaDepartamento {
      */
     public List<Object[]> obtenerResumenProyectos() {
         List<Object[]> resumen = new java.util.ArrayList<>();
-        List<ProyectoInvestigacion> proyectos = proyectoDAO.listarTodos();
-        for (ProyectoInvestigacion p : proyectos) {
+        List<Proyectos> proyectos = proyectoDAO.listarTodos();
+        for (Proyectos p : proyectos) {
             int planificados = p.getAyudantesPlanificados();
             List<Ayudante> ayudantesProyecto = ayudanteDAO.buscarPorProyecto(p.getCodigoProyecto());
             
@@ -163,7 +163,7 @@ public class ControladorJefaDepartamento {
      * - Los servicios hacen el trabajo específico
      */
     public Reporte generarReporteGeneral() {
-        List<ProyectoInvestigacion> proyectos = proyectoDAO.listarTodos();
+        List<Proyectos> proyectos = proyectoDAO.listarTodos();
         List<Ayudante> ayudantes = ayudanteDAO.listarTodos();
         
         GeneradorReportes generador = new GeneradorReportes(proyectos, ayudantes);
@@ -174,11 +174,11 @@ public class ControladorJefaDepartamento {
      * Genera un reporte por proyecto
      */
     public Reporte generarReportePorProyecto(String codigoProyecto) {
-        ProyectoInvestigacion proyecto = proyectoDAO.buscarPorId(codigoProyecto);
+        Proyectos proyecto = proyectoDAO.buscarPorId(codigoProyecto);
         if (proyecto == null) {
             return null;
         }
-        List<ProyectoInvestigacion> proyectos = proyectoDAO.listarTodos();
+        List<Proyectos> proyectos = proyectoDAO.listarTodos();
         List<Ayudante> ayudantes = ayudanteDAO.listarTodos();
         
         GeneradorReportes generador = new GeneradorReportes(proyectos, ayudantes);
@@ -189,7 +189,7 @@ public class ControladorJefaDepartamento {
      * Genera un reporte por carrera
      */
     public Reporte generarReportePorCarrera(String carrera) {
-        List<ProyectoInvestigacion> proyectos = proyectoDAO.listarTodos();
+        List<Proyectos> proyectos = proyectoDAO.listarTodos();
         List<Ayudante> ayudantes = ayudanteDAO.listarTodos();
         
         GeneradorReportes generador = new GeneradorReportes(proyectos, ayudantes);
@@ -200,7 +200,7 @@ public class ControladorJefaDepartamento {
      * Genera un reporte por nivel
      */
     public Reporte generarReportePorNivel(int nivel) {
-        List<ProyectoInvestigacion> proyectos = proyectoDAO.listarTodos();
+        List<Proyectos> proyectos = proyectoDAO.listarTodos();
         List<Ayudante> ayudantes = ayudanteDAO.listarTodos();
         
         GeneradorReportes generador = new GeneradorReportes(proyectos, ayudantes);
@@ -280,7 +280,7 @@ public class ControladorJefaDepartamento {
     /**
      * NUEVO: Obtiene información sobre proyectos activos
      */
-    public List<ProyectoInvestigacion> obtenerProyectosActivos() {
+    public List<Proyectos> obtenerProyectosActivos() {
         return proyectoDAO.listarTodos().stream()
             .filter(p -> "ACTIVO".equals(p.getEstado()))
             .collect(java.util.stream.Collectors.toList());

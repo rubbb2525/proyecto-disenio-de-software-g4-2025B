@@ -47,7 +47,7 @@ public class ServicioConversionAsistente {
 
     public static AsistenteInvestigacion convertirEstudianteAAsistente(
             Estudiante estudiante,
-            ProyectoInvestigacion proyecto,
+            Proyectos proyecto,
             int horas,
             double salario,
             String tituloAcademico,

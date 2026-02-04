@@ -37,7 +37,7 @@ public class ConexionBD {
             Class.forName(DRIVER);
             conexion = DriverManager.getConnection(URL);
             System.out.println("✓ Conexión a BD SQLite exitosa");
-            inicializarBaseDatos();
+            // La inicialización de tablas se hará después desde InitBD.inicializar()
         } catch (ClassNotFoundException e) {
             System.out.println("✗ Error: Driver SQLite no encontrado - " + e.getMessage());
         } catch (SQLException e) {
@@ -47,15 +47,16 @@ public class ConexionBD {
 
     /**
      * Inicializa las tablas si no existen y aplica pequeñas migraciones necesarias
+     * DEBE llamarse DESPUÉS de que las tablas hayan sido creadas por InitBD
      */
-    private void inicializarBaseDatos() {
+    public void inicializarBaseDatos() {
         try (var statement = conexion.createStatement()) {
             // Habilitar claves foráneas en SQLite
             statement.execute("PRAGMA foreign_keys = ON");
             System.out.println("✓ Foreign keys habilitadas");
 
             // Asegurar que la columna categoria_proyecto exista en las tablas relevantes
-            String[] tablas = {"proyectos", "ProyectoInvestigacion"};
+            String[] tablas = {"proyectos", "Proyectos"};
             for (String tabla : tablas) {
                 try (ResultSet rs = statement.executeQuery("PRAGMA table_info('" + tabla + "')")) {
                     boolean found = false;

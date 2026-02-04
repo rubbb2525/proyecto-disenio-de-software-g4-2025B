@@ -9,10 +9,10 @@ import java.util.Map;
  * Servicio para generar reportes del sistema
  */
 public class GeneradorReportes {
-    private List<ProyectoInvestigacion> proyectos;
+    private List<Proyectos> proyectos;
     private List<Ayudante> ayudantes;
 
-    public GeneradorReportes(List<ProyectoInvestigacion> proyectos, List<Ayudante> ayudantes) {
+    public GeneradorReportes(List<Proyectos> proyectos, List<Ayudante> ayudantes) {
         this.proyectos = proyectos;
         this.ayudantes = ayudantes;
     }
@@ -68,7 +68,7 @@ public class GeneradorReportes {
     /**
      * Genera un reporte específico por proyecto
      */
-    public Reporte generarReportePorProyecto(ProyectoInvestigacion proyecto) {
+    public Reporte generarReportePorProyecto(Proyectos proyecto) {
         String idReporte = "REPORTE_PROYECTO_" + proyecto.getCodigoProyecto();
         Reporte reporte = new Reporte(idReporte, "PROYECTO", "Reporte Proyecto: " + proyecto.getNombreProyecto());
         reporte.setFechaGeneracion(new Date());

@@ -23,7 +23,7 @@ public class TecnicoInvestigacion {
     private Date fechaFinalizacion;
     private String motivoSalida;
 
-    private ProyectoInvestigacion proyectoAsignado;
+    private Proyectos proyectoAsignado;
 
     // =========================
     // CONSTRUCTORES
@@ -38,7 +38,7 @@ public class TecnicoInvestigacion {
                                 String nombres, String apellidos, String telefono,
                                 String especialidadTecnica, int aniosExperiencia,
                                 String empresaOrigen, int horasSemanales,
-                                double salarioMensual, ProyectoInvestigacion proyectoAsignado) {
+                                double salarioMensual, Proyectos proyectoAsignado) {
 
         this.idTecnico = idTecnico;
         this.cedula = cedula;
@@ -182,11 +182,11 @@ public class TecnicoInvestigacion {
         this.motivoSalida = motivoSalida;
     }
 
-    public ProyectoInvestigacion getProyectoAsignado() {
+    public Proyectos getProyectoAsignado() {
         return proyectoAsignado;
     }
 
-    public void setProyectoAsignado(ProyectoInvestigacion proyectoAsignado) {
+    public void setProyectoAsignado(Proyectos proyectoAsignado) {
         this.proyectoAsignado = proyectoAsignado;
     }
 }

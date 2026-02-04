@@ -11,7 +11,7 @@ public class Notificacion {
     private String mensaje;
     private String tipo;
     private boolean leida;
-    private ProyectoInvestigacion proyectoRelacionado;
+    private Proyectos proyectoRelacionado;
     private Ayudante ayudanteRelacionado;
 
     public Notificacion() {
@@ -76,11 +76,11 @@ public class Notificacion {
         this.leida = leida;
     }
 
-    public ProyectoInvestigacion getProyectoRelacionado() {
+    public Proyectos getProyectoRelacionado() {
         return proyectoRelacionado;
     }
 
-    public void setProyectoRelacionado(ProyectoInvestigacion proyectoRelacionado) {
+    public void setProyectoRelacionado(Proyectos proyectoRelacionado) {
         this.proyectoRelacionado = proyectoRelacionado;
     }
 

@@ -31,11 +31,12 @@ public class InitBD {
             
             // 1. Ejecutar el script principal de schema
             System.out.println("→ Ejecutando script principal (schema_bd.sql)...");
-            ejecutarScript(conn, "schema_bd.sql");
+            ejecutarScript(conn, "bd\\schema\\schema_bd.sql");
             
-            // 2. Ejecutar el script de migración de asistentes y técnicos
-            System.out.println("\n→ Ejecutando script de migración (migracion_asistentes_tecnicos_sqlite.sql)...");
-            ejecutarScript(conn, "bd/migracion_asistentes_tecnicos_sqlite.sql");
+            // 2. Aplicar migraciones adicionales (agregar columnas nuevas, etc.)
+            System.out.println("\n→ Aplicando migraciones adicionales...");
+            ConexionBD.getInstancia().inicializarBaseDatos();
+            
             
             System.out.println("\n✓ Base de datos inicializada correctamente\n");
             

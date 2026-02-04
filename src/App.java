@@ -110,7 +110,7 @@ public class App {
         // El proyecto se obtendrá via DAO en ControladorDirector.obtenerProyectoDelDirector()
         // cuando sea necesario (Lazy Loading)
         
-        // ProyectoInvestigacion proyecto = proyectoDAO.buscarPorDirector(director.getCodigoUnico());
+        // Proyectos proyecto = proyectoDAO.buscarPorDirector(director.getCodigoUnico());
         // director.setProyectoAsignado(proyecto);  ← ELIMINADO
 
         // Crear controlador del director

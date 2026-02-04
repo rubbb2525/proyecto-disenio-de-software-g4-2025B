@@ -248,7 +248,7 @@ public class AyudanteDAO implements IDAO<Ayudante> {
         if (codigoProyecto != null && !codigoProyecto.isBlank()) {
             try {
                 ProyectoDAO proyectoDAO = new ProyectoDAO();
-                ProyectoInvestigacion proyecto = proyectoDAO.buscarPorId(codigoProyecto);
+                Proyectos proyecto = proyectoDAO.buscarPorId(codigoProyecto);
                 ayudante.setProyectoAsignado(proyecto);
             } catch (Exception ignored) {}
         }

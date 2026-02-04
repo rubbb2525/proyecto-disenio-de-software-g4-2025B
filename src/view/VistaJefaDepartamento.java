@@ -5,7 +5,7 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
 import controller.ControladorJefaDepartamento;
 import model.Ayudante;
-import model.ProyectoInvestigacion;
+import model.Proyectos;
 import model.Notificacion;
 import model.Reporte;
 import view.componentes.AdvancedTableModel;
@@ -395,8 +395,8 @@ public class VistaJefaDepartamento extends JFrame {
         // Cargar proyectos (desde BD)
         comboProyectos.removeAllItems();
         comboProyectos.addItem("Todos");
-        List<ProyectoInvestigacion> proyectos = controlador.obtenerTodosProyectos();
-        for (ProyectoInvestigacion p : proyectos) {
+        List<Proyectos> proyectos = controlador.obtenerTodosProyectos();
+        for (Proyectos p : proyectos) {
             comboProyectos.addItem(new ProyectoItem(p.getCodigoProyecto(), p.getNombreProyecto()));
         }
         panelProyectosActivos.actualizarValor(String.valueOf(proyectos.size()));
@@ -486,8 +486,8 @@ public class VistaJefaDepartamento extends JFrame {
 
     private java.util.List<String> obtenerNombresProyectos() {
         var nombres = new java.util.ArrayList<String>();
-        List<ProyectoInvestigacion> proyectos = controlador.obtenerTodosProyectos();
-        for (ProyectoInvestigacion p : proyectos) {
+        List<Proyectos> proyectos = controlador.obtenerTodosProyectos();
+        for (Proyectos p : proyectos) {
             nombres.add(p.getNombreProyecto());
         }
         return nombres;

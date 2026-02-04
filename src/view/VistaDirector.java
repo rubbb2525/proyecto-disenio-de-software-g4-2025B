@@ -5,7 +5,7 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
 import controller.ControladorDirector;
 import model.Ayudante;
-import model.ProyectoInvestigacion;
+import model.Proyectos;
 import view.componentes.StyledButton;
 import view.componentes.IconManager;
 import view.componentes.RoundedBorder;
@@ -308,7 +308,7 @@ public class VistaDirector extends JFrame {
     }
 
     private void cargarDatos() {
-        ProyectoInvestigacion proyecto = controlador.getProyecto();
+        Proyectos proyecto = controlador.getProyecto();
         if (proyecto != null) {
             lblProyecto.setText("Proyecto: " + proyecto.getNombreProyecto());
             lblCuposDisponibles.setText("Cupos disponibles: " + proyecto.getCuposDisponibles());
