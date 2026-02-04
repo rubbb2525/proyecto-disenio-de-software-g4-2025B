@@ -142,12 +142,12 @@ public class Reporte {
         document.add(new Paragraph("\n"));
 
         // Tabla
-        float[] columnWidths = {60, 100, 80, 50, 50, 60, 70};
+        float[] columnWidths = {60, 100, 80, 50, 50, 60};
         Table table = new Table(columnWidths);
         table.setBackgroundColor(ColorConstants.WHITE);
 
         // Headers
-        String[] headers = {"Código", "Nombres", "Carrera", "Nivel", "IRA", "Horas", "Salario"};
+        String[] headers = {"Código", "Nombres", "Carrera", "Nivel", "IRA", "Horas Semanales"};
         for (String header : headers) {
             Cell cell = new Cell()
                 .setBackgroundColor(new com.itextpdf.kernel.colors.DeviceRgb(74, 144, 226))
@@ -183,10 +183,6 @@ public class Reporte {
                 .add(new Paragraph(String.valueOf(a.getHorasSemanales()))
                     .setFont(regular)
                     .setTextAlignment(TextAlignment.CENTER));
-            Cell c7 = new Cell().setBackgroundColor(colorFondo)
-                .add(new Paragraph(String.valueOf(a.getMesesContratados()))
-                    .setFont(regular)
-                    .setTextAlignment(TextAlignment.RIGHT));
 
             table.addCell(c1);
             table.addCell(c2);
@@ -194,7 +190,6 @@ public class Reporte {
             table.addCell(c4);
             table.addCell(c5);
             table.addCell(c6);
-            table.addCell(c7);
 
             alterno = !alterno;
         }

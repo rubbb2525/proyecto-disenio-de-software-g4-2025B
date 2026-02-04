@@ -60,7 +60,9 @@ CREATE TABLE IF NOT EXISTS proyectos (
     estado TEXT NOT NULL DEFAULT 'ACTIVO',
     categoria_proyecto TEXT NOT NULL DEFAULT 'INVESTIGACION' CHECK(categoria_proyecto IN ('INVESTIGACION','VINCULACION','TRANSFERENCIA_TECNOLOGICA')),
     tipo_proyecto TEXT NOT NULL CHECK(tipo_proyecto IN ('INTERNO', 'SEMILLA', 'GRUPAL', 'MULTIDISCIPLINARIO', 'TRANSFERENCIA_TECNOLOGICA', 'TRANSFERENCIA', 'VINCULACION', 'VINCULACION_CON_FINANCIAMIENTO')),
-    ayudantes_planificados INTEGER NOT NULL,
+    ayudantes_planificados INTEGER NOT NULL DEFAULT 0,
+    tecnicos_planificados INTEGER NOT NULL DEFAULT 0,
+    asistentes_planificados INTEGER NOT NULL DEFAULT 0,
     codigo_director TEXT,
     FOREIGN KEY (codigo_director) REFERENCES miembros_epn(codigo_unico)
 );

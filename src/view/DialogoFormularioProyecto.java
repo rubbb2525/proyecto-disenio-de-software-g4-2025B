@@ -33,12 +33,13 @@ public class DialogoFormularioProyecto extends JDialog {
 
     private PlaceholderTextField txtCodigoProyecto;
     private PlaceholderTextField txtNombreProyecto;
-    private JTextArea txtDescripcion;
-    private JTextField txtFechaInicio;
-    private JTextField txtFechaFin;
+    private JSpinner spnFechaInicio;
+    private JSpinner spnFechaFin;
     private JComboBox<CategoriaProyecto> cmbCategoriaProyecto;
     private JComboBox<TipoProyecto> cmbTipoProyecto;
     private JSpinner spnAyudantesPlanificados;
+    private JSpinner spnTecnicosPlanificados;
+    private JSpinner spnAsistentesPlanificados;
     
     private StyledButton btnGuardar;
     private StyledButton btnCancelar;
@@ -56,7 +57,7 @@ public class DialogoFormularioProyecto extends JDialog {
     }
 
     private void initUI() {
-        setSize(600, 700);
+        setSize(600, 550);
         setLocationRelativeTo(getParent());
         setLayout(new BorderLayout(0, 12));
         setResizable(false);
@@ -109,39 +110,44 @@ public class DialogoFormularioProyecto extends JDialog {
         txtNombreProyecto = new PlaceholderTextField("Nombre descriptivo del proyecto");
         addField(form, gbc, "Nombre del Proyecto *", txtNombreProyecto);
 
-        // Descripción
+        // Fecha de inicio con JSpinner
         gbc.gridy++;
-        JLabel lblDesc = new JLabel("Descripción");
-        lblDesc.setFont(new Font("Arial", Font.BOLD, 12));
-        lblDesc.setForeground(COLOR_TEXTO);
-        form.add(lblDesc, gbc);
+        gbc.gridx = 0;
+        gbc.weightx = 0;
+        JLabel lblFechaInicio = new JLabel("Fecha de Inicio *");
+        lblFechaInicio.setFont(new Font("Arial", Font.BOLD, 12));
+        lblFechaInicio.setForeground(COLOR_TEXTO);
+        form.add(lblFechaInicio, gbc);
 
         gbc.gridx = 1;
         gbc.weightx = 1.0;
-        txtDescripcion = new JTextArea(4, 30);
-        txtDescripcion.setLineWrap(true);
-        txtDescripcion.setWrapStyleWord(true);
-        txtDescripcion.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(COLOR_BORDE, 1),
-            BorderFactory.createEmptyBorder(6, 8, 6, 8)
-        ));
-        txtDescripcion.setFont(new Font("Arial", Font.PLAIN, 12));
-        JScrollPane scrollDesc = new JScrollPane(txtDescripcion);
-        scrollDesc.setPreferredSize(new Dimension(300, 80));
-        form.add(scrollDesc, gbc);
+        spnFechaInicio = new JSpinner(new SpinnerDateModel());
+        JSpinner.DateEditor editorInicio = new JSpinner.DateEditor(spnFechaInicio, "yyyy-MM-dd");
+        spnFechaInicio.setEditor(editorInicio);
+        spnFechaInicio.setFont(new Font("Arial", Font.PLAIN, 12));
+        spnFechaInicio.setPreferredSize(new Dimension(300, 32));
+        form.add(spnFechaInicio, gbc);
+
+        // Fecha de fin con JSpinner
+        gbc.gridy++;
+        gbc.gridx = 0;
+        gbc.weightx = 0;
+        JLabel lblFechaFin = new JLabel("Fecha de Fin *");
+        lblFechaFin.setFont(new Font("Arial", Font.BOLD, 12));
+        lblFechaFin.setForeground(COLOR_TEXTO);
+        form.add(lblFechaFin, gbc);
+
+        gbc.gridx = 1;
+        gbc.weightx = 1.0;
+        spnFechaFin = new JSpinner(new SpinnerDateModel());
+        JSpinner.DateEditor editorFin = new JSpinner.DateEditor(spnFechaFin, "yyyy-MM-dd");
+        spnFechaFin.setEditor(editorFin);
+        spnFechaFin.setFont(new Font("Arial", Font.PLAIN, 12));
+        spnFechaFin.setPreferredSize(new Dimension(300, 32));
+        form.add(spnFechaFin, gbc);
 
         gbc.gridx = 0;
         gbc.weightx = 0;
-
-        // Fecha de inicio
-        txtFechaInicio = new JTextField(15);
-        txtFechaInicio.setFont(new Font("Arial", Font.PLAIN, 12));
-        addField(form, gbc, "Fecha de Inicio * (AAAA-MM-DD)", txtFechaInicio);
-
-        // Fecha de fin
-        txtFechaFin = new JTextField(15);
-        txtFechaFin.setFont(new Font("Arial", Font.PLAIN, 12));
-        addField(form, gbc, "Fecha de Fin * (AAAA-MM-DD)", txtFechaFin);
 
         // Categoría del proyecto (niv. superior)
         gbc.gridy++;
@@ -214,6 +220,40 @@ public class DialogoFormularioProyecto extends JDialog {
         spnAyudantesPlanificados.setFont(new Font("Arial", Font.PLAIN, 12));
         ((JSpinner.DefaultEditor) spnAyudantesPlanificados.getEditor()).getTextField().setColumns(5);
         form.add(spnAyudantesPlanificados, gbc);
+
+        // Técnicos planificados
+        gbc.gridy++;
+        gbc.gridx = 0;
+        gbc.weightx = 0;
+        JLabel lblTecnicos = new JLabel("Técnicos Planificados *");
+        lblTecnicos.setFont(new Font("Arial", Font.BOLD, 12));
+        lblTecnicos.setForeground(COLOR_TEXTO);
+        form.add(lblTecnicos, gbc);
+
+        gbc.gridx = 1;
+        gbc.weightx = 1.0;
+        SpinnerNumberModel spinnerTecnicosModel = new SpinnerNumberModel(0, 0, 20, 1);
+        spnTecnicosPlanificados = new JSpinner(spinnerTecnicosModel);
+        spnTecnicosPlanificados.setFont(new Font("Arial", Font.PLAIN, 12));
+        ((JSpinner.DefaultEditor) spnTecnicosPlanificados.getEditor()).getTextField().setColumns(5);
+        form.add(spnTecnicosPlanificados, gbc);
+
+        // Asistentes planificados
+        gbc.gridy++;
+        gbc.gridx = 0;
+        gbc.weightx = 0;
+        JLabel lblAsistentes = new JLabel("Asistentes Planificados *");
+        lblAsistentes.setFont(new Font("Arial", Font.BOLD, 12));
+        lblAsistentes.setForeground(COLOR_TEXTO);
+        form.add(lblAsistentes, gbc);
+
+        gbc.gridx = 1;
+        gbc.weightx = 1.0;
+        SpinnerNumberModel spinnerAsistentesModel = new SpinnerNumberModel(0, 0, 20, 1);
+        spnAsistentesPlanificados = new JSpinner(spinnerAsistentesModel);
+        spnAsistentesPlanificados.setFont(new Font("Arial", Font.PLAIN, 12));
+        ((JSpinner.DefaultEditor) spnAsistentesPlanificados.getEditor()).getTextField().setColumns(5);
+        form.add(spnAsistentesPlanificados, gbc);
 
         // Nota de campos obligatorios
         gbc.gridx = 0;
@@ -322,17 +362,18 @@ public class DialogoFormularioProyecto extends JDialog {
         // Obtener valores de los campos
         String codigoProyecto = txtCodigoProyecto.getText().trim();
         String nombreProyecto = txtNombreProyecto.getText().trim();
-        String descripcion = txtDescripcion.getText().trim();
-        String fechaInicioStr = txtFechaInicio.getText().trim();
-        String fechaFinStr = txtFechaFin.getText().trim();
+        Date fechaInicio = (Date) spnFechaInicio.getValue();
+        Date fechaFin = (Date) spnFechaFin.getValue();
         TipoProyecto tipoProyecto = (TipoProyecto) cmbTipoProyecto.getSelectedItem();
         int ayudantesPlanificados = (Integer) spnAyudantesPlanificados.getValue();
+        int tecnicosPlanificados = (Integer) spnTecnicosPlanificados.getValue();
+        int asistentesPlanificados = (Integer) spnAsistentesPlanificados.getValue();
 
         // Validaciones de formato en la vista
         if (codigoProyecto.isEmpty()) {
             JOptionPane.showMessageDialog(this, 
                 "El código del proyecto es obligatorio", 
-                "Error de Validación", 
+                "Error de Validacion", 
                 JOptionPane.ERROR_MESSAGE);
             txtCodigoProyecto.requestFocus();
             return;
@@ -347,29 +388,12 @@ public class DialogoFormularioProyecto extends JDialog {
             return;
         }
 
-        // Validar y parsear fechas
-        Date fechaInicio = null;
-        Date fechaFin = null;
-
-        try {
-            fechaInicio = dateFormat.parse(fechaInicioStr);
-        } catch (ParseException e) {
+        // Validar que la fecha de inicio sea anterior a la fecha de fin
+        if (fechaInicio.after(fechaFin)) {
             JOptionPane.showMessageDialog(this, 
-                "Formato de fecha de inicio inválido. Use: AAAA-MM-DD", 
-                "Error de Validación", 
+                "La fecha de inicio debe ser anterior a la fecha de fin", 
+                "Error de Validacion", 
                 JOptionPane.ERROR_MESSAGE);
-            txtFechaInicio.requestFocus();
-            return;
-        }
-
-        try {
-            fechaFin = dateFormat.parse(fechaFinStr);
-        } catch (ParseException e) {
-            JOptionPane.showMessageDialog(this, 
-                "Formato de fecha de fin inválido. Use: AAAA-MM-DD", 
-                "Error de Validación", 
-                JOptionPane.ERROR_MESSAGE);
-            txtFechaFin.requestFocus();
             return;
         }
 
@@ -377,15 +401,17 @@ public class DialogoFormularioProyecto extends JDialog {
         btnGuardar.setEnabled(false);
         btnGuardar.setText("Creando...");
 
-        // Invocar al controlador
+        // Invocar al controlador (sin descripción)
         ResultadoOperacion resultado = controlador.crearProyecto(
             codigoProyecto,
             nombreProyecto,
-            descripcion,
+            "",  // Descripción vacía
             fechaInicio,
             fechaFin,
             tipoProyecto,
-            ayudantesPlanificados
+            ayudantesPlanificados,
+            tecnicosPlanificados,
+            asistentesPlanificados
         );
 
         // Habilitar botón nuevamente

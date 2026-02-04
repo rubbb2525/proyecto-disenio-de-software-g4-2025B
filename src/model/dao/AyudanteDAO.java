@@ -161,7 +161,7 @@ public class AyudanteDAO implements IDAO<Ayudante> {
     public boolean actualizar(Ayudante ayudante) {
         String sql = "UPDATE ayudantes SET cedula = ?, correo_institucional = ?, " +
                      "nombres = ?, apellidos = ?, telefono = ?, carrera = ?, nivel = ?, ira = ?, " +
-                     "horas_semanales = ?, salario_mensual = ?, estado = ?, fecha_finalizacion = ?, " +
+                     "horas_semanales = ?, meses_contratados = ?, estado = ?, fecha_finalizacion = ?, " +
                      "motivo_salida = ?, codigo_proyecto = ? WHERE codigo_unico = ?";
         
         try (PreparedStatement ps = conexion.prepareStatement(sql)) {

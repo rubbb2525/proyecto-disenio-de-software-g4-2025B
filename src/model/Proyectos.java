@@ -16,11 +16,11 @@ public class Proyectos {
     private String estado;
     private TipoProyecto tipoProyecto;
     private int ayudantesPlanificados;
-    private List<Ayudante> ayudantes;
+    private int tecnicosPlanificados;
+    private int asistentesPlanificados;
     private Director director;
 
     public Proyectos() {
-        this.ayudantes = new ArrayList<>();
     }
 
     public Proyectos(String codigoProyecto, String nombreProyecto, String descripcion,
@@ -34,39 +34,40 @@ public class Proyectos {
         this.estado = estado;
         this.tipoProyecto = tipoProyecto;
         this.ayudantesPlanificados = ayudantesPlanificados;
-        this.ayudantes = new ArrayList<>();
+        this.tecnicosPlanificados = 0;
+        this.asistentesPlanificados = 0;
     }
 
-    /**
-     * Agrega un ayudante al proyecto si hay cupo disponible
-     */
-    public boolean agregarAyudante(Ayudante ayudante) {
-        if (tieneCupoDisponible() && ayudante != null) {
-            return ayudantes.add(ayudante);
-        }
-        return false;
-    }
-
-    /**
-     * Remueve un ayudante del proyecto
-     */
-    public boolean removerAyudante(Ayudante ayudante) {
-        if (ayudante != null) {
-            return ayudantes.remove(ayudante);
-        }
-        return false;
+    public Proyectos(String codigoProyecto, String nombreProyecto, String descripcion,
+                                Date fechaInicio, Date fechaFin, String estado,
+                                TipoProyecto tipoProyecto, int ayudantesPlanificados,
+                                int tecnicosPlanificados, int asistentesPlanificados) {
+        this.codigoProyecto = codigoProyecto;
+        this.nombreProyecto = nombreProyecto;
+        this.descripcion = descripcion;
+        this.fechaInicio = fechaInicio;
+        this.fechaFin = fechaFin;
+        this.estado = estado;
+        this.tipoProyecto = tipoProyecto;
+        this.ayudantesPlanificados = ayudantesPlanificados;
+        this.tecnicosPlanificados = tecnicosPlanificados;
+        this.asistentesPlanificados = asistentesPlanificados;
     }
 
     /**
      * Retorna el número de ayudantes activos
      */
     public int getAyudantesActivos() {
-        return (int) ayudantes.stream().filter(Ayudante::esActivo).count();
+        // Este método debe ser usado con AyudanteDAO para obtener datos reales de BD
+        // Placeholder para compatibilidad
+        return 0;
     }
 
     /**
-     * Verifica si el proyecto está activo
+     * @deprecated Usar tieneEstadoActivo() en su lugar. Este método usa lógica redundante.
+     * Verifica si el proyecto está activo considerando solo fechas sin validar estado.
      */
+    @Deprecated
     public boolean estaActivo() {
         Date hoy = new Date();
         return "ACTIVO".equals(estado) && 
@@ -118,6 +119,8 @@ public class Proyectos {
             codigoProyecto,
             nombreProyecto,
             ayudantesPlanificados,
+            tecnicosPlanificados,
+            asistentesPlanificados,
             contratadosActivos,
             cupos,
             estado,
@@ -258,12 +261,39 @@ public class Proyectos {
         this.ayudantesPlanificados = ayudantesPlanificados;
     }
 
-    public List<Ayudante> getAyudantes() {
-        return ayudantes;
+    public int getTecnicosPlanificados() {
+        return tecnicosPlanificados;
     }
 
+    public void setTecnicosPlanificados(int tecnicosPlanificados) {
+        this.tecnicosPlanificados = tecnicosPlanificados;
+    }
+
+    public int getAsistentesPlanificados() {
+        return asistentesPlanificados;
+    }
+
+    public void setAsistentesPlanificados(int asistentesPlanificados) {
+        this.asistentesPlanificados = asistentesPlanificados;
+    }
+
+    /**
+     * @deprecated No usar para obtener ayudantes del proyecto.
+     * Usar AyudanteDAO.buscarPorProyecto(codigoProyecto) en su lugar.
+     * Este método solo retorna lista vacía por compatibilidad.
+     */
+    @Deprecated
+    public List<Ayudante> getAyudantes() {
+        return new ArrayList<>();
+    }
+
+    /**
+     * @deprecated No usar para manipular ayudantes del proyecto.
+     * Usar AyudanteDAO en su lugar.
+     */
+    @Deprecated
     public void setAyudantes(List<Ayudante> ayudantes) {
-        this.ayudantes = ayudantes;
+        // Método vacío por compatibilidad
     }
 
     public Director getDirector() {

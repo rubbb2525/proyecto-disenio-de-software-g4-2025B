@@ -1,13 +1,11 @@
 package view;
 
 import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
 import controller.ControladorDirector;
 import model.Ayudante;
 import model.Proyectos;
 import view.componentes.StyledButton;
-import view.componentes.IconManager;
 import view.componentes.RoundedBorder;
 import view.componentes.AdvancedTableModel;
 import view.componentes.ToastMessage;
@@ -48,8 +46,9 @@ public class VistaDirector extends JFrame {
     private JTextField campoBusqueda;
     private javax.swing.Timer timerRefresh;
     private PanelEstadistica panelTotalAyudantes;
+    private PanelEstadistica panelTotalAsistentes;
+    private PanelEstadistica panelTotalTecnicos;
     private PanelEstadistica panelCuposDisponibles;
-    private PanelEstadistica panelHorasTotales;
 
     public VistaDirector(ControladorDirector controlador) {
         this.controlador = controlador;
@@ -200,12 +199,27 @@ public class VistaDirector extends JFrame {
             ToastMessage.mostrar(this, "Selecciona un ayudante activo", ToastMessage.TipoToast.ADVERTENCIA);
             return;
         }
+        
+        // Mostrar opciones de motivo
+        String[] motivos = {"FIN_CONTRATO", "RETIRO_VOLUNTARIO", "FUERZA_MAYOR"};
+        String motivoSeleccionado = (String) JOptionPane.showInputDialog(
+            this,
+            "Seleccione el motivo de baja para " + seleccionado.getNombresCompletos() + ":",
+            "Motivo de Baja",
+            JOptionPane.QUESTION_MESSAGE,
+            null,
+            motivos,
+            motivos[0]
+        );
+        
+        if (motivoSeleccionado == null) return; // Usuario canceló
+        
         DialogoConfirmacion dialogo = new DialogoConfirmacion(this, "Confirmar baja", 
-            "¿Dar de baja a " + seleccionado.getNombresCompletos() + "?");
+            "¿Dar de baja a " + seleccionado.getNombresCompletos() + " por " + motivoSeleccionado + "?");
         dialogo.setVisible(true);
         if (!dialogo.esConfirmado()) return;
             
-        var res = controlador.darDeBajaAyudante(seleccionado.getCodigoUnico(), "Baja manual", new Date());
+        var res = controlador.darDeBajaAyudante(seleccionado.getCodigoUnico(), motivoSeleccionado, new Date());
         if (res.esExitoso()) {
             ToastMessage.mostrar(this, res.getMensaje(), ToastMessage.TipoToast.EXITO);
             cargarDatos();
@@ -227,89 +241,111 @@ public class VistaDirector extends JFrame {
         Proyectos proyecto = controlador.getProyecto();
         if (proyecto != null) {
             lblProyecto.setText("Proyecto: " + proyecto.getNombreProyecto());
-            lblCuposDisponibles.setText("Cupos disponibles: " + proyecto.getCuposDisponibles());
-            panelCuposDisponibles.actualizarValor(String.valueOf(proyecto.getCuposDisponibles()));
+            
+            // Actualizar tablas primero
+            actualizarTablaAyudantes();
+            actualizarTablaAsistentes();
+            actualizarTablaTecnicos();
+            
+            // Calcular cupos disponibles restando ayudantes activos del total planificado
+            int totalAyudantes = Integer.parseInt(panelTotalAyudantes.obtenerValor());
+            int cuposDisponibles = proyecto.getAyudantesPlanificados() - totalAyudantes;
+            lblCuposDisponibles.setText("Cupos disponibles: " + cuposDisponibles + " de " + proyecto.getAyudantesPlanificados());
+            panelCuposDisponibles.actualizarValor(String.valueOf(cuposDisponibles));
+        } else {
+            lblProyecto.setText("Proyecto: Sin proyecto asignado");
+            lblCuposDisponibles.setText("Cupos disponibles: --");
+            panelTotalAyudantes.actualizarValor("0");
+            panelTotalAsistentes.actualizarValor("0");
+            panelTotalTecnicos.actualizarValor("0");
+            panelCuposDisponibles.actualizarValor("0");
         }
-        
-        actualizarTablaAyudantes();
-        actualizarTablaAsistentes();
-        actualizarTablaTecnicos();
     }
 
     private void actualizarTablaAyudantes() {
         modeloTabla.limpiar();
         
         java.util.List<Ayudante> ayudantes = controlador.consultarAyudantesDelProyecto();
-        if (ayudantes != null) {
-            // Actualizar estadísticas
-            panelTotalAyudantes.actualizarValor(String.valueOf(ayudantes.size()));
-            
-            int horasTotales = 0;
-            java.util.List<Object[]> filas = new java.util.ArrayList<>();
-            for (Ayudante a : ayudantes) {
-                if (a.esActivo()) {
-                    horasTotales += a.getHorasSemanales();
-                    Object[] fila = {
-                        a.getCodigoUnico(),
-                        a.getNombresCompletos(),
-                        a.getCarrera(),
-                        a.getNivel(),
-                        String.format("%.2f", a.getIRA()),
-                        a.getHorasSemanales(),
-                        String.format("$%.2f", a.calcularCostoTotal())
-                    };
-                    filas.add(fila);
-                }
-            }
-            panelHorasTotales.actualizarValor(String.valueOf(horasTotales));
-            modeloTabla.establecerDatos(filas);
+        if (ayudantes == null) {
+            ayudantes = new java.util.ArrayList<>();
         }
-        campoBusqueda.setText("");
+        
+        // Actualizar estadísticas
+        int totalAyudantes = 0;
+        int horasTotales = 0;
+        java.util.List<Object[]> filas = new java.util.ArrayList<>();
+        
+        for (Ayudante a : ayudantes) {
+            if (a.esActivo()) {
+                totalAyudantes++;
+                horasTotales += a.getHorasSemanales();
+                Object[] fila = {
+                    a.getCodigoUnico(),
+                    a.getNombresCompletos(),
+                    a.getCarrera(),
+                    a.getNivel(),
+                    String.format("%.2f", a.getIRA()),
+                    a.getMesesContratados()
+                };
+                filas.add(fila);
+            }
+        }
+        
+        panelTotalAyudantes.actualizarValor(String.valueOf(totalAyudantes));
+        modeloTabla.establecerDatos(filas);
     }
 
     private void actualizarTablaAsistentes() {
         modeloAsistentes.limpiar();
         
         java.util.List<AsistenteInvestigacion> asistentes = controlador.obtenerAsistentesProyecto();
-        if (asistentes != null && !asistentes.isEmpty()) {
-            java.util.List<Object[]> filas = new java.util.ArrayList<>();
-            for (AsistenteInvestigacion a : asistentes) {
-                if (a.esActivo()) {
-                    Object[] fila = {
-                        a.getCodigoUnico(),
-                        a.getNombresCompletos(),
-                        a.getCarrera(),
-                        a.getNivel(),
-                        String.format("%.2f", a.getIRA()),
-                        a.getHorasSemanales(),
-                        String.format("$%.2f", a.calcularCostoTotal())
-                    };
-                    filas.add(fila);
-                }
-            }
-            modeloAsistentes.establecerDatos(filas);
+        if (asistentes == null) {
+            asistentes = new java.util.ArrayList<>();
         }
+        
+        int totalAsistentes = 0;
+        java.util.List<Object[]> filas = new java.util.ArrayList<>();
+        for (AsistenteInvestigacion a : asistentes) {
+            if (a.esActivo()) {
+                totalAsistentes++;
+                Object[] fila = {
+                    a.getCodigoUnico(),
+                    a.getNombresCompletos(),
+                    a.getCarrera(),
+                    a.getNivel(),
+                    String.format("%.2f", a.getIRA()),
+                    a.getMesesContratados()
+                };
+                filas.add(fila);
+            }
+        }
+        panelTotalAsistentes.actualizarValor(String.valueOf(totalAsistentes));
+        modeloAsistentes.establecerDatos(filas);
     }
 
     private void actualizarTablaTecnicos() {
         modeloTecnicos.limpiar();
         
         java.util.List<TecnicoInvestigacion> tecnicos = controlador.obtenerTecnicosProyecto();
-        if (tecnicos != null && !tecnicos.isEmpty()) {
-            java.util.List<Object[]> filas = new java.util.ArrayList<>();
-            for (TecnicoInvestigacion t : tecnicos) {
-                if (t.esActivo()) {
-                    Object[] fila = {
-                        t.getIdTecnico(),
-                        t.getNombresCompletos(),
-                        t.getHorasSemanales(),
-                        String.format("$%.2f", t.calcularCostoTotal())
-                    };
-                    filas.add(fila);
-                }
-            }
-            modeloTecnicos.establecerDatos(filas);
+        if (tecnicos == null) {
+            tecnicos = new java.util.ArrayList<>();
         }
+        
+        int totalTecnicos = 0;
+        java.util.List<Object[]> filas = new java.util.ArrayList<>();
+        for (TecnicoInvestigacion t : tecnicos) {
+            if (t.esActivo()) {
+                totalTecnicos++;
+                Object[] fila = {
+                    t.getIdTecnico(),
+                    t.getNombresCompletos(),
+                    t.getMesesContratados()
+                };
+                filas.add(fila);
+            }
+        }
+        panelTotalTecnicos.actualizarValor(String.valueOf(totalTecnicos));
+        modeloTecnicos.establecerDatos(filas);
     }
 
     public void mostrarVentana() {
@@ -362,7 +398,7 @@ public class VistaDirector extends JFrame {
             ConstantesVisuales.PADDING_MD
         ));
 
-        JLabel lblTitulo = new JLabel("👤 Director");
+        JLabel lblTitulo = new JLabel("Director");
         lblTitulo.setForeground(Color.WHITE);
         lblTitulo.setFont(ConstantesVisuales.FUENTE_TITULO);
         lblTitulo.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -373,7 +409,7 @@ public class VistaDirector extends JFrame {
 
         JPanel headerRight = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         headerRight.setOpaque(false);
-        btnRefrescar = new StyledButton("Refrescar", StyledButton.TipoBoton.SECUNDARIO);
+        btnRefrescar = new StyledButton("Actualizar", StyledButton.TipoBoton.SECUNDARIO);
         btnRefrescar.setToolTipText("Actualizar datos (F5)");
         headerRight.add(btnRefrescar);
         
@@ -386,16 +422,19 @@ public class VistaDirector extends JFrame {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, ConstantesVisuales.PADDING_MD, 0));
         panel.setBackground(COLOR_FONDO);
         
-        panelTotalAyudantes = new PanelEstadistica("Total Ayudantes", "0", 
-            ConstantesVisuales.COLOR_INFO, "👥");
+        panelTotalAyudantes = new PanelEstadistica("Ayudantes", "0", 
+            ConstantesVisuales.COLOR_INFO, "");
+        panelTotalAsistentes = new PanelEstadistica("Asistentes", "0", 
+            new Color(46, 204, 113), "");
+        panelTotalTecnicos = new PanelEstadistica("Tecnicos", "0", 
+            new Color(241, 196, 15), "");
         panelCuposDisponibles = new PanelEstadistica("Cupos Disponibles", "0", 
-            ConstantesVisuales.COLOR_EXITO, "✓");
-        panelHorasTotales = new PanelEstadistica("Horas Semanales", "0", 
-            new Color(155, 89, 182), "⏱");
+            ConstantesVisuales.COLOR_EXITO, "");
         
         panel.add(panelTotalAyudantes);
+        panel.add(panelTotalAsistentes);
+        panel.add(panelTotalTecnicos);
         panel.add(panelCuposDisponibles);
-        panel.add(panelHorasTotales);
         
         return panel;
     }
@@ -439,7 +478,7 @@ public class VistaDirector extends JFrame {
         JPanel panelBusqueda = new JPanel(new BorderLayout(ConstantesVisuales.PADDING_MD, 0));
         panelBusqueda.setBackground(COLOR_FONDO);
         
-        JLabel lblBuscar = new JLabel("🔍 Buscar:");
+        JLabel lblBuscar = new JLabel("Buscar:");
         lblBuscar.setFont(ConstantesVisuales.FUENTE_NORMAL_PEQUEÑO);
         lblBuscar.setForeground(ConstantesVisuales.COLOR_TEXTO_PRINCIPAL);
         
@@ -464,28 +503,28 @@ public class VistaDirector extends JFrame {
         tabs.setFont(ConstantesVisuales.FUENTE_NORMAL);
         
         // Tab Ayudantes
-        String[] columnasAyudantes = {"Código", "Nombres", "Carrera", "Nivel", "IRA", "Horas", "Salario"};
+        String[] columnasAyudantes = {"Código", "Nombres", "Carrera", "Nivel", "IRA", "Meses Contratados"};
         modeloTabla = new AdvancedTableModel(columnasAyudantes);
         tablaAyudantes = crearTablaEstilizada(modeloTabla);
         JScrollPane scrollAyudantes = new JScrollPane(tablaAyudantes);
         scrollAyudantes.setBorder(crearBordeTabla());
-        tabs.addTab("👥 Ayudantes", scrollAyudantes);
+        tabs.addTab("Ayudantes", scrollAyudantes);
         
         // Tab Asistentes
-        String[] columnasAsistentes = {"Código", "Nombres", "Carrera", "Nivel", "IRA", "Horas", "Salario"};
+        String[] columnasAsistentes = {"Código", "Nombres", "Carrera", "Nivel", "IRA", "Meses Contratados"};
         modeloAsistentes = new AdvancedTableModel(columnasAsistentes);
         tablaAsistentes = crearTablaEstilizada(modeloAsistentes);
         JScrollPane scrollAsistentes = new JScrollPane(tablaAsistentes);
         scrollAsistentes.setBorder(crearBordeTabla());
-        tabs.addTab("🔬 Asistentes", scrollAsistentes);
+        tabs.addTab("Asistentes", scrollAsistentes);
         
         // Tab Técnicos
-        String[] columnasTecnicos = {"ID", "Nombres", "Horas", "Salario"};
+        String[] columnasTecnicos = {"ID", "Nombres", "Meses Contratados"};
         modeloTecnicos = new AdvancedTableModel(columnasTecnicos);
         tablaTecnicos = crearTablaEstilizada(modeloTecnicos);
         JScrollPane scrollTecnicos = new JScrollPane(tablaTecnicos);
         scrollTecnicos.setBorder(crearBordeTabla());
-        tabs.addTab("⚙️ Técnicos", scrollTecnicos);
+        tabs.addTab("Tecnicos", scrollTecnicos);
         
         panelTabla.add(panelBusqueda, BorderLayout.NORTH);
         panelTabla.add(tabs, BorderLayout.CENTER);
@@ -537,13 +576,13 @@ public class VistaDirector extends JFrame {
         JPanel acciones = new JPanel(new FlowLayout(FlowLayout.LEFT, ConstantesVisuales.PADDING_MD, 0));
         acciones.setBackground(COLOR_FONDO);
         
-        btnRegistrar = new StyledButton("➕ Realizar Contratación", StyledButton.TipoBoton.PRIMARIO);
+        btnRegistrar = new StyledButton("Realizar Contratacion", StyledButton.TipoBoton.PRIMARIO);
         btnRegistrar.setToolTipText("Realizar nueva contratación (Ctrl+N)");
         
-        btnDarBaja = new StyledButton("🗑️ Dar de baja", StyledButton.TipoBoton.PELIGRO);
+        btnDarBaja = new StyledButton("Dar de baja", StyledButton.TipoBoton.PELIGRO);
         btnDarBaja.setToolTipText("Dar de baja ayudante seleccionado (Supr)");
         
-        btnCrearProyecto = new StyledButton("📋 Crear Proyecto", StyledButton.TipoBoton.EXITO);
+        btnCrearProyecto = new StyledButton("Crear Proyecto", StyledButton.TipoBoton.EXITO);
         btnCrearProyecto.setToolTipText("Crear nuevo proyecto de investigación (Ctrl+P)");
         
         acciones.add(btnRegistrar);
