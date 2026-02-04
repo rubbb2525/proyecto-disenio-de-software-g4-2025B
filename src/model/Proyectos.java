@@ -260,8 +260,8 @@ public class Proyectos {
         if (estado == null || estado.trim().isEmpty()) {
             throw new IllegalArgumentException("El estado del proyecto no puede estar vacío");
         }
-        if (!estado.matches("ACTIVO|INACTIVO|SUSPENDIDO")) {
-            throw new IllegalArgumentException("El estado debe ser ACTIVO, INACTIVO o SUSPENDIDO");
+        if (!estado.matches("ACTIVO|INACTIVO|SUSPENDIDO|Cerrado|Proceso de cierre")) {
+            throw new IllegalArgumentException("El estado debe ser ACTIVO, INACTIVO, SUSPENDIDO, Cerrado o Proceso de cierre");
         }
         this.estado = estado;
     }

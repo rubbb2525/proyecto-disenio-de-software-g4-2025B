@@ -25,10 +25,6 @@ public class App {
     private static VistaJefaDepartamento vistaJefa;
 
     public static void main(String[] args) throws Exception {
-        System.out.println("\n╔════════════════════════════════════════════════════════╗");
-        System.out.println("║   Sistema Gestión Ayudantes - FIS-EPN                 ║");
-        System.out.println("║   Versión 2.0 | SQLite + Servicios Refactorizados   ║");
-        System.out.println("╚════════════════════════════════════════════════════════╝\n");
         
         // Inicializar conexión a BD SQLite
         System.out.println("→ Conectando a BD SQLite...");

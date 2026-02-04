@@ -3,7 +3,6 @@ package controller;
 import model.*;
 import model.dao.*;
 import model.service.ServicioDeEstadisticas;
-import model.service.ServicioDeReportes;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
@@ -58,9 +57,7 @@ public class ControladorJefaDepartamento {
      */
     public List<Ayudante> filtrarAyudantes(Map<String, Object> filtros) {
         List<Ayudante> todosAyudantes = ayudanteDAO.listarTodos();
-        
-        // CAMBIO: Usar método estático del modelo
-        return Ayudante.filtrar(todosAyudantes, filtros);
+        return jefaDepartamento.filtrarAyudantes(todosAyudantes, filtros);
     }
 
     /**
@@ -69,7 +66,7 @@ public class ControladorJefaDepartamento {
      */
     public List<Ayudante> obtenerAyudantesActivos() {
         List<Ayudante> todos = ayudanteDAO.listarTodos();
-        return Ayudante.obtenerActivos(todos);
+        return jefaDepartamento.obtenerAyudantesActivos(todos);
     }
 
     /**
@@ -78,7 +75,7 @@ public class ControladorJefaDepartamento {
      */
     public List<Ayudante> obtenerAyudantesInactivos() {
         List<Ayudante> todos = ayudanteDAO.listarTodos();
-        return Ayudante.obtenerInactivos(todos);
+        return jefaDepartamento.obtenerAyudantesInactivos(todos);
     }
 
     /**
@@ -87,7 +84,7 @@ public class ControladorJefaDepartamento {
      */
     public List<Ayudante> obtenerAyudantesPorCarrera(String carrera) {
         List<Ayudante> todos = ayudanteDAO.listarTodos();
-        return Ayudante.porCarrera(todos, carrera);
+        return jefaDepartamento.obtenerAyudantesPorCarrera(todos, carrera);
     }
 
     /**
@@ -96,7 +93,7 @@ public class ControladorJefaDepartamento {
      */
     public List<Ayudante> obtenerAyudantesPorNivel(int nivel) {
         List<Ayudante> todos = ayudanteDAO.listarTodos();
-        return Ayudante.porNivel(todos, nivel);
+        return jefaDepartamento.obtenerAyudantesPorNivel(todos, nivel);
     }
 
     /**
@@ -119,7 +116,7 @@ public class ControladorJefaDepartamento {
      */
     public Map<String, Object> obtenerEstadisticasGenerales() {
         List<Ayudante> todos = ayudanteDAO.listarTodos();
-        return ServicioDeEstadisticas.calcularTodas(todos);
+        return jefaDepartamento.obtenerEstadisticasGenerales(todos);
     }
 
     /**
@@ -128,7 +125,7 @@ public class ControladorJefaDepartamento {
      */
     public Map<String, Map<String, Object>> obtenerEstadisticasPorCarrera() {
         List<Ayudante> todos = ayudanteDAO.listarTodos();
-        return ServicioDeEstadisticas.estadisticasPorCarrera(todos);
+        return jefaDepartamento.obtenerEstadisticasPorCarrera(todos);
     }
 
     /**
@@ -137,7 +134,7 @@ public class ControladorJefaDepartamento {
      */
     public Map<Integer, Map<String, Object>> obtenerEstadisticasPorNivel() {
         List<Ayudante> todos = ayudanteDAO.listarTodos();
-        return ServicioDeEstadisticas.estadisticasPorNivel(todos);
+        return jefaDepartamento.obtenerEstadisticasPorNivel(todos);
     }
 
     /**
@@ -145,15 +142,13 @@ public class ControladorJefaDepartamento {
      * cupos disponibles, estado, inicio, fin
      */
     public List<Object[]> obtenerResumenProyectos() {
-        List<Object[]> resumen = new java.util.ArrayList<>();
         List<Proyectos> proyectos = proyectoDAO.listarTodos();
+        Map<String, List<Ayudante>> ayudantesPorProyecto = new HashMap<>();
         for (Proyectos p : proyectos) {
             List<Ayudante> ayudantesProyecto = ayudanteDAO.buscarPorProyecto(p.getCodigoProyecto());
-
-            Object[] fila = p.crearResumen(ayudantesProyecto);
-            resumen.add(fila);
+            ayudantesPorProyecto.put(p.getCodigoProyecto(), ayudantesProyecto);
         }
-        return resumen;
+        return jefaDepartamento.obtenerResumenProyectos(proyectos, ayudantesPorProyecto);
     }
 
     /**
@@ -166,8 +161,7 @@ public class ControladorJefaDepartamento {
     public Reporte generarReporteGeneral() {
         List<Proyectos> proyectos = proyectoDAO.listarTodos();
         List<Ayudante> ayudantes = ayudanteDAO.listarTodos();
-
-        return ServicioDeReportes.generarReporteGeneral(proyectos, ayudantes);
+        return jefaDepartamento.generarReporteGeneral(proyectos, ayudantes);
     }
 
     /**
@@ -175,10 +169,7 @@ public class ControladorJefaDepartamento {
      */
     public Reporte generarReportePorProyecto(String codigoProyecto) {
         Proyectos proyecto = proyectoDAO.buscarPorId(codigoProyecto);
-        if (proyecto == null) {
-            return null;
-        }
-        return ServicioDeReportes.generarReportePorProyecto(proyecto);
+        return jefaDepartamento.generarReportePorProyecto(proyecto);
     }
 
     /**
@@ -186,8 +177,7 @@ public class ControladorJefaDepartamento {
      */
     public Reporte generarReportePorCarrera(String carrera) {
         List<Ayudante> ayudantes = ayudanteDAO.listarTodos();
-
-        return ServicioDeReportes.generarReportePorCarrera(carrera, ayudantes);
+        return jefaDepartamento.generarReportePorCarrera(carrera, ayudantes);
     }
 
     /**
@@ -195,8 +185,7 @@ public class ControladorJefaDepartamento {
      */
     public Reporte generarReportePorNivel(int nivel) {
         List<Ayudante> ayudantes = ayudanteDAO.listarTodos();
-
-        return ServicioDeReportes.generarReportePorNivel(nivel, ayudantes);
+        return jefaDepartamento.generarReportePorNivel(nivel, ayudantes);
     }
 
     /**
@@ -300,7 +289,7 @@ public class ControladorJefaDepartamento {
      */
     public long contarAyudantesActivos() {
         List<Ayudante> todos = ayudanteDAO.listarTodos();
-        return ServicioDeEstadisticas.contarActivos(todos);
+        return (long) jefaDepartamento.obtenerEstadisticasGenerales(todos).getOrDefault("activos", 0L);
     }
 
     /**
@@ -308,7 +297,10 @@ public class ControladorJefaDepartamento {
      */
     public long contarAyudantesInactivos() {
         List<Ayudante> todos = ayudanteDAO.listarTodos();
-        return ServicioDeEstadisticas.contarInactivos(todos);
+        Map<String, Object> stats = jefaDepartamento.obtenerEstadisticasGenerales(todos);
+        long total = ((Number) stats.getOrDefault("total", 0)).longValue();
+        long activos = ((Number) stats.getOrDefault("activos", 0)).longValue();
+        return Math.max(0, total - activos);
     }
 
     /**

@@ -62,9 +62,6 @@ public class ServicioDeEstadisticas {
         double mesesPromedio = calcularMesesPromedio(ayudantes);
         stats.put("mesesPromedio", mesesPromedio);
         
-        // Calcular costo total
-        double costoTotal = calcularCostoTotal(ayudantes);
-        stats.put("costoTotal", costoTotal);
         
         // Porcentaje de activos
         double porcentajeActivos = (activos / (double) total) * 100;
@@ -124,21 +121,7 @@ public class ServicioDeEstadisticas {
                 .orElse(0.0);
     }
     
-    /**
-     * Calcula el costo total de todos los ayudantes
-     * 
-     * @param ayudantes Lista de ayudantes
-     * @return Suma total de costos
-     */
-    public static double calcularCostoTotal(List<Ayudante> ayudantes) {
-        if (ayudantes == null || ayudantes.isEmpty()) {
-            return 0.0;
-        }
-        
-        return ayudantes.stream()
-                .mapToDouble(Ayudante::calcularCostoTotal)
-                .sum();
-    }
+
     
     /**
      * Cuenta el total de ayudantes activos

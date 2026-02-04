@@ -5,7 +5,10 @@ import javax.swing.table.JTableHeader;
 import javax.swing.table.DefaultTableCellRenderer;
 import controller.ControladorDirector;
 import model.Ayudante;
+import model.AsistenteInvestigacion;
+import model.TecnicoInvestigacion;
 import model.Proyectos;
+import model.ResultadoOperacion;
 import view.componentes.StyledButton;
 import view.componentes.RoundedBorder;
 import view.componentes.AdvancedTableModel;
@@ -46,10 +49,10 @@ public class VistaDirector extends JFrame {
     private JTable tablaTecnicos;
     private JTextField campoBusqueda;
     private javax.swing.Timer timerRefresh;
+    private JTabbedPane tabsTablas;
     private PanelEstadistica panelTotalAyudantes;
     private PanelEstadistica panelTotalAsistentes;
     private PanelEstadistica panelTotalTecnicos;
-    private PanelEstadistica panelCuposDisponibles;
 
     public VistaDirector(ControladorDirector controlador) {
         this.controlador = controlador;
@@ -168,24 +171,21 @@ public class VistaDirector extends JFrame {
         seccion.add(lblTitulo);
         seccion.add(Box.createVerticalStrut(12));
         
-        // Panel con las 4 estadísticas
-        JPanel panelStats = new JPanel(new GridLayout(1, 4, 16, 0));
+        // Panel con las 3 estadísticas
+        JPanel panelStats = new JPanel(new GridLayout(1, 3, 16, 0));
         panelStats.setOpaque(false);
         panelStats.setMaximumSize(new Dimension(Integer.MAX_VALUE, 120));
         
-        panelTotalAyudantes = new PanelEstadistica("Ayudantes Activos", "0", 
-            new Color(52, 152, 219), "");
-        panelTotalAsistentes = new PanelEstadistica("Asistentes Activos", "0", 
-            new Color(46, 204, 113), "");
-        panelTotalTecnicos = new PanelEstadistica("Técnicos Activos", "0", 
-            new Color(241, 196, 15), "");
-        panelCuposDisponibles = new PanelEstadistica("Cupos Disponibles", "0", 
-            new Color(155, 89, 182), "");
+        panelTotalAyudantes = new PanelEstadistica("Ayudantes", "0/0", 
+            new Color(52, 152, 219), "Contratados/Planificados");
+        panelTotalAsistentes = new PanelEstadistica("Asistentes", "0/0", 
+            new Color(46, 204, 113), "Contratados/Planificados");
+        panelTotalTecnicos = new PanelEstadistica("Técnicos", "0/0", 
+            new Color(241, 196, 15), "Contratados/Planificados");
         
         panelStats.add(panelTotalAyudantes);
         panelStats.add(panelTotalAsistentes);
         panelStats.add(panelTotalTecnicos);
-        panelStats.add(panelCuposDisponibles);
         
         seccion.add(panelStats);
         
@@ -388,8 +388,8 @@ public class VistaDirector extends JFrame {
         panelContenedor.add(panelBusqueda, BorderLayout.NORTH);
         
         // Tabs con las tablas
-        JTabbedPane tabs = crearTabsTablas();
-        panelContenedor.add(tabs, BorderLayout.CENTER);
+        tabsTablas = crearTabsTablas();
+        panelContenedor.add(tabsTablas, BorderLayout.CENTER);
         
         seccion.add(panelContenedor);
         
@@ -594,7 +594,7 @@ public class VistaDirector extends JFrame {
             }
         });
 
-        btnDarBaja.addActionListener(e -> darDeBajaAyudante());
+        btnDarBaja.addActionListener(e -> darDeBajaColaborador());
 
         btnRegistrar.addActionListener(e -> {
             DialogoSeleccionContratacion dialogo = new DialogoSeleccionContratacion(this, controlador);
@@ -633,7 +633,7 @@ public class VistaDirector extends JFrame {
         );
         
         getRootPane().registerKeyboardAction(
-            e -> darDeBajaAyudante(),
+            e -> darDeBajaColaborador(),
             KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0),
             JComponent.WHEN_IN_FOCUSED_WINDOW
         );
@@ -645,6 +645,29 @@ public class VistaDirector extends JFrame {
         );
     }
     
+    private void darDeBajaColaborador() {
+        if (tabsTablas == null) {
+            ToastMessage.mostrar(this, "Error: Tabs no inicializados", ToastMessage.TipoToast.ERROR);
+            return;
+        }
+        
+        int pestaniaActiva = tabsTablas.getSelectedIndex();
+        
+        switch (pestaniaActiva) {
+            case 0: // Ayudantes
+                darDeBajaAyudante();
+                break;
+            case 1: // Asistentes
+                darDeBajaAsistente();
+                break;
+            case 2: // Técnicos
+                darDeBajaTecnico();
+                break;
+            default:
+                ToastMessage.mostrar(this, "Pestaña no reconocida", ToastMessage.TipoToast.ADVERTENCIA);
+        }
+    }
+    
     private void darDeBajaAyudante() {
         Ayudante seleccionado = getAyudanteSeleccionado();
         if (seleccionado == null) {
@@ -652,10 +675,37 @@ public class VistaDirector extends JFrame {
             return;
         }
         
+        procesarBaja(seleccionado.getNombresCompletos(), 
+                    () -> controlador.darDeBajaAyudante(seleccionado.getCodigoUnico(), null, new Date()));
+    }
+    
+    private void darDeBajaAsistente() {
+        AsistenteInvestigacion seleccionado = getAsistenteSeleccionado();
+        if (seleccionado == null) {
+            ToastMessage.mostrar(this, "Debe seleccionar un asistente activo de la tabla", ToastMessage.TipoToast.ADVERTENCIA);
+            return;
+        }
+        
+        procesarBaja(seleccionado.getNombresCompletos(), 
+                    () -> seleccionado.darDeBaja(null, new Date()));
+    }
+    
+    private void darDeBajaTecnico() {
+        TecnicoInvestigacion seleccionado = getTecnicoSeleccionado();
+        if (seleccionado == null) {
+            ToastMessage.mostrar(this, "Debe seleccionar un técnico activo de la tabla", ToastMessage.TipoToast.ADVERTENCIA);
+            return;
+        }
+        
+        procesarBaja(seleccionado.getNombresCompletos(), 
+                    () -> seleccionado.darDeBaja(null, new Date()));
+    }
+    
+    private void procesarBaja(String nombre, java.util.function.Supplier<ResultadoOperacion> operacionBaja) {
         String[] motivos = {"FIN_CONTRATO", "RETIRO_VOLUNTARIO", "FUERZA_MAYOR"};
         String motivoSeleccionado = (String) JOptionPane.showInputDialog(
             this,
-            "Seleccione el motivo de baja para:\n" + seleccionado.getNombresCompletos(),
+            "Seleccione el motivo de baja para:\n" + nombre,
             "Motivo de Baja",
             JOptionPane.QUESTION_MESSAGE,
             null,
@@ -666,11 +716,11 @@ public class VistaDirector extends JFrame {
         if (motivoSeleccionado == null) return;
         
         DialogoConfirmacion dialogo = new DialogoConfirmacion(this, "Confirmar Baja", 
-            "¿Está seguro de dar de baja a " + seleccionado.getNombresCompletos() + "?\nMotivo: " + motivoSeleccionado);
+            "¿Está seguro de dar de baja a " + nombre + "?\nMotivo: " + motivoSeleccionado);
         dialogo.setVisible(true);
         if (!dialogo.esConfirmado()) return;
             
-        var res = controlador.darDeBajaAyudante(seleccionado.getCodigoUnico(), motivoSeleccionado, new Date());
+        var res = operacionBaja.get();
         if (res.esExitoso()) {
             ToastMessage.mostrar(this, res.getMensaje(), ToastMessage.TipoToast.EXITO);
             cargarDatos();
@@ -709,21 +759,20 @@ public class VistaDirector extends JFrame {
             actualizarTablaAsistentes();
             actualizarTablaTecnicos();
             
-            // Calcular cupos
-            int totalAyudantes = Integer.parseInt(panelTotalAyudantes.obtenerValor());
+            // Obtener conteos actuales
+            int totalAyudantes = Integer.parseInt(panelTotalAyudantes.obtenerValor().split("/")[0]);
             int cuposDisponibles = proyecto.getAyudantesPlanificados() - totalAyudantes;
+            
             lblCuposInfo.setText("Cupos utilizados: " + totalAyudantes + " de " + proyecto.getAyudantesPlanificados() 
                 + " (Disponibles: " + cuposDisponibles + ")");
-            panelCuposDisponibles.actualizarValor(String.valueOf(cuposDisponibles));
         } else {
             lblProyectoNombre.setText("Sin proyecto asignado");
             lblProyectoTipo.setText("Tipo: --");
             lblProyectoFechas.setText("Periodo: --");
             lblCuposInfo.setText("Cupos: No disponible");
-            panelTotalAyudantes.actualizarValor("0");
-            panelTotalAsistentes.actualizarValor("0");
-            panelTotalTecnicos.actualizarValor("0");
-            panelCuposDisponibles.actualizarValor("0");
+            panelTotalAyudantes.actualizarValor("0/0");
+            panelTotalAsistentes.actualizarValor("0/0");
+            panelTotalTecnicos.actualizarValor("0/0");
         }
     }
 
@@ -750,7 +799,9 @@ public class VistaDirector extends JFrame {
             }
         }
         
-        panelTotalAyudantes.actualizarValor(String.valueOf(totalActivos));
+        Proyectos proyecto = controlador.getProyecto();
+        int planificados = (proyecto != null) ? proyecto.getAyudantesPlanificados() : 0;
+        panelTotalAyudantes.actualizarValor(totalActivos + "/" + planificados);
         modeloTabla.establecerDatos(filas);
     }
 
@@ -777,7 +828,9 @@ public class VistaDirector extends JFrame {
             }
         }
         
-        panelTotalAsistentes.actualizarValor(String.valueOf(totalActivos));
+        Proyectos proyecto = controlador.getProyecto();
+        int planificados = (proyecto != null) ? proyecto.getAsistentesPlanificados() : 0;
+        panelTotalAsistentes.actualizarValor(totalActivos + "/" + planificados);
         modeloAsistentes.establecerDatos(filas);
     }
 
@@ -801,7 +854,9 @@ public class VistaDirector extends JFrame {
             }
         }
         
-        panelTotalTecnicos.actualizarValor(String.valueOf(totalActivos));
+        Proyectos proyecto = controlador.getProyecto();
+        int planificados = (proyecto != null) ? proyecto.getTecnicosPlanificados() : 0;
+        panelTotalTecnicos.actualizarValor(totalActivos + "/" + planificados);
         modeloTecnicos.establecerDatos(filas);
     }
 
@@ -824,6 +879,36 @@ public class VistaDirector extends JFrame {
                 String codigo = (String) filaActual[0];
                 return controlador.consultarAyudantesDelProyecto().stream()
                     .filter(a -> a.getCodigoUnico().equals(codigo))
+                    .findFirst()
+                    .orElse(null);
+            }
+        }
+        return null;
+    }
+
+    public AsistenteInvestigacion getAsistenteSeleccionado() {
+        int fila = tablaAsistentes.getSelectedRow();
+        if (fila >= 0) {
+            Object[] filaActual = modeloAsistentes.obtenerFila(fila);
+            if (filaActual != null) {
+                String codigo = (String) filaActual[0];
+                return controlador.obtenerAsistentesProyecto().stream()
+                    .filter(a -> a.getCodigoUnico().equals(codigo))
+                    .findFirst()
+                    .orElse(null);
+            }
+        }
+        return null;
+    }
+
+    public TecnicoInvestigacion getTecnicoSeleccionado() {
+        int fila = tablaTecnicos.getSelectedRow();
+        if (fila >= 0) {
+            Object[] filaActual = modeloTecnicos.obtenerFila(fila);
+            if (filaActual != null) {
+                String idTecnico = (String) filaActual[0];
+                return controlador.obtenerTecnicosProyecto().stream()
+                    .filter(t -> t.getIdTecnico().equals(idTecnico))
                     .findFirst()
                     .orElse(null);
             }

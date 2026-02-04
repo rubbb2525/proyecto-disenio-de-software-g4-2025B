@@ -84,14 +84,6 @@ public class Ayudante extends MiembroEPN {
         return resultado;
     }
 
-    /**
-     * Calcula el costo total estimado basado en meses contratados
-     */
-    public double calcularCostoTotal() {
-        // Estimación: horas_semanales * semanas_por_mes * meses_contratados * valor_hora
-        return horasSemanales * 4.33 * mesesContratados * 5.0; // 5.0 es valor estimado por hora
-    }
-
     // Getters y Setters
     public String getCarrera() {
         return carrera;

@@ -140,12 +140,16 @@ public class Estudiante extends MiembroEPN {
      */
     public Ayudante convertirAAyudante(Proyectos proyecto, int horas, int meses) {
         Ayudante ayudante = new Ayudante();
+        String passwordBase = getPassword();
+        if (passwordBase == null || passwordBase.trim().isEmpty()) {
+            passwordBase = "N/A";
+        }
         
         // Copiar datos comunes
         ayudante.setCodigoUnico(getCodigoUnico());
         ayudante.setCedula(getCedula());
         ayudante.setCorreoInstitucional(getCorreoInstitucional());
-        ayudante.setPassword(getPassword());
+        ayudante.setPassword(passwordBase);
         ayudante.setNombres(getNombres());
         ayudante.setApellidos(getApellidos());
         ayudante.setTelefono(getTelefono());
@@ -171,11 +175,16 @@ public class Estudiante extends MiembroEPN {
      */
     public AsistenteInvestigacion convertirAAsistente(Proyectos proyecto, int horas, int meses) {
         AsistenteInvestigacion asistente = new AsistenteInvestigacion();
+        String passwordBase = getPassword();
+        if (passwordBase == null || passwordBase.trim().isEmpty()) {
+            passwordBase = "N/A";
+        }
 
         // Copiar datos comunes
         asistente.setCodigoUnico(getCodigoUnico());
         asistente.setCedula(getCedula());
         asistente.setCorreoInstitucional(getCorreoInstitucional());
+        asistente.setPassword(passwordBase);
         asistente.setNombres(getNombres());
         asistente.setApellidos(getApellidos());
         asistente.setTelefono(getTelefono());

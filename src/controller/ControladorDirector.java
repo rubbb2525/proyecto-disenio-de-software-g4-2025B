@@ -76,18 +76,12 @@ public class ControladorDirector {
     public ResultadoOperacion registrarAyudante(String codigoEstudiante, int horas, int meses) {
         // Obtener proyecto del director
         Proyectos proyecto = obtenerProyectoDelDirector();
-        if (proyecto == null) {
-            return ResultadoOperacion.fallido("Director sin proyecto asignado", "Proyecto no disponible");
-        }
 
         // Buscar estudiante
         Estudiante estudiante = buscarEstudiante(codigoEstudiante);
-        if (estudiante == null) {
-            return ResultadoOperacion.noEncontrado("Estudiante", "Código de estudiante");
-        }
 
-        // Validar conversión usando el modelo
-        ResultadoOperacion validacion = estudiante.validarConversionAyudante(horas, meses);
+        // Validar registro usando el modelo Director
+        ResultadoOperacion validacion = directorActual.validarRegistroAyudante(proyecto, estudiante, horas, meses);
         if (!validacion.esExitoso()) {
             return validacion;
         }
@@ -147,17 +141,11 @@ public class ControladorDirector {
         int meses
 ) {
     Proyectos proyecto = obtenerProyectoDelDirector();
-    if (proyecto == null) {
-        return ResultadoOperacion.fallido("Director sin proyecto asignado", "Proyecto no disponible");
-    }
 
     Estudiante estudiante = buscarEstudiante(codigoEstudiante);
-    if (estudiante == null) {
-        return ResultadoOperacion.noEncontrado("Estudiante", "Código de estudiante");
-    }
 
-    // Validar conversión usando el modelo
-    ResultadoOperacion validacion = estudiante.validarConversionAsistente(horas, meses);
+        // Validar registro usando el modelo Director
+        ResultadoOperacion validacion = directorActual.validarRegistroAsistente(proyecto, estudiante, horas, meses);
     if (!validacion.esExitoso()) {
         return validacion;
     }
@@ -179,17 +167,11 @@ public class ControladorDirector {
 }
 
 public ResultadoOperacion registrarTecnico(TecnicoInvestigacion tecnico) {
-
-    ResultadoOperacion resultado = new ResultadoOperacion();
-
     Proyectos proyecto = obtenerProyectoDelDirector();
-    if (proyecto == null) {
-        resultado.setMensaje("Director sin proyecto asignado");
+    ResultadoOperacion resultado = directorActual.prepararTecnico(tecnico, proyecto);
+    if (!resultado.esExitoso()) {
         return resultado;
     }
-
-    tecnico.setProyectoAsignado(proyecto);
-    tecnico.setEstado("ACTIVO");
 
     if (!tecnicoDAO.guardar(tecnico)) {
         resultado.setMensaje("Error al guardar técnico en BD");
@@ -267,10 +249,7 @@ public ResultadoOperacion registrarTecnico(TecnicoInvestigacion tecnico) {
      */
     public String obtenerNombreProyecto() {
         Proyectos proyecto = obtenerProyectoDelDirector();
-        if (proyecto == null) {
-            return "Sin proyecto asignado";
-        }
-        return proyecto.getNombreProyecto();
+        return directorActual.obtenerNombreProyecto(proyecto);
     }
 
     /**
@@ -278,10 +257,7 @@ public ResultadoOperacion registrarTecnico(TecnicoInvestigacion tecnico) {
      */
     public int obtenerCuposDisponibles() {
         Proyectos proyecto = obtenerProyectoDelDirector();
-        if (proyecto == null) {
-            return 0;
-        }
-        return proyecto.getCuposDisponibles();
+        return directorActual.obtenerCuposDisponibles(proyecto);
     }
 
     /**
@@ -289,10 +265,7 @@ public ResultadoOperacion registrarTecnico(TecnicoInvestigacion tecnico) {
      */
     public boolean hayCapoDisponible() {
         Proyectos proyecto = obtenerProyectoDelDirector();
-        if (proyecto == null) {
-            return false;
-        }
-        return proyecto.tieneCupoDisponible();
+        return directorActual.hayCupoDisponible(proyecto);
     }
 
     /**
@@ -344,22 +317,18 @@ public ResultadoOperacion registrarTecnico(TecnicoInvestigacion tecnico) {
             return validacionProyecto;
         }
 
-        // Crear el proyecto
-        Proyectos nuevoProyecto = new Proyectos(
+        // Crear el proyecto desde el modelo Director
+        Proyectos nuevoProyecto = directorActual.crearProyecto(
             codigoProyecto,
             nombreProyecto,
             descripcion,
             fechaInicio,
             fechaFin,
-            "ACTIVO",
             tipoProyecto,
             ayudantesPlanificados,
             tecnicosPlanificados,
             asistentesPlanificados
         );
-
-        // Asignar el director al proyecto
-        nuevoProyecto.setDirector(directorActual);
 
         // Guardar en BD
         if (!proyectoDAO.guardar(nuevoProyecto)) {
