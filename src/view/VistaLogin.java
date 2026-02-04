@@ -1,10 +1,14 @@
 package view;
 
 import javax.swing.*;
-import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import java.net.URL;
+import javax.imageio.ImageIO;
 import java.util.function.Consumer;
 import controller.ControladorAutenticacion;
 import model.ResultadoOperacion;
@@ -131,36 +135,71 @@ public class VistaLogin extends JFrame {
     }
 
     private JPanel crearLogoEPN() {
-        JPanel panel = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2d = (Graphics2D) g;
-                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
-                                     RenderingHints.VALUE_ANTIALIAS_ON);
-                
-                // Círculo exterior
-                g2d.setColor(new Color(255, 255, 255, 30));
-                g2d.fillOval(10, 10, 80, 80);
-                
-                // Círculo interior
-                g2d.setColor(Color.WHITE);
-                g2d.fillOval(20, 20, 60, 60);
-                
-                // Letras EPN
-                g2d.setColor(ConstantesVisuales.COLOR_PRIMARIO);
-                g2d.setFont(new Font("Segoe UI", Font.BOLD, 24));
-                FontMetrics fm = g2d.getFontMetrics();
-                String texto = "EPN";
-                int x = (100 - fm.stringWidth(texto)) / 2;
-                int y = (100 - fm.getHeight()) / 2 + fm.getAscent();
-                g2d.drawString(texto, x, y);
-            }
-        };
+        JLabel logo = new JLabel();
+        logo.setHorizontalAlignment(SwingConstants.CENTER);
+        logo.setVerticalAlignment(SwingConstants.CENTER);
+        logo.setOpaque(false);
+
+        ImageIcon icono = cargarLogoEPN();
+        if (icono != null) {
+            logo.setIcon(icono);
+        } else {
+            logo.setText("EPN");
+            logo.setFont(new Font("Segoe UI", Font.BOLD, 24));
+            logo.setForeground(Color.WHITE);
+        }
+
+        JPanel panel = new JPanel(new BorderLayout());
         panel.setOpaque(false);
-        panel.setPreferredSize(new Dimension(100, 100));
-        panel.setMaximumSize(new Dimension(100, 100));
+        panel.setPreferredSize(new Dimension(110, 110));
+        panel.setMaximumSize(new Dimension(110, 110));
+        panel.add(logo, BorderLayout.CENTER);
         return panel;
+    }
+
+    private ImageIcon cargarLogoEPN() {
+        String resourcePath = "/view/componentes/EPN_logo_big.png";
+        URL recurso = getClass().getResource(resourcePath);
+        try {
+            BufferedImage imagen;
+            if (recurso != null) {
+                imagen = ImageIO.read(recurso);
+            } else {
+                File archivoVista = new File("src/view/componentes/EPN_logo_big.png");
+                File archivoModel = new File("src/model/components/EPN_logo_big.png");
+                if (archivoVista.exists()) {
+                    imagen = ImageIO.read(archivoVista);
+                } else if (archivoModel.exists()) {
+                    imagen = ImageIO.read(archivoModel);
+                } else {
+                    return null;
+                }
+            }
+
+            int maxWidth = 120;
+            int maxHeight = 100;
+            int width = imagen.getWidth();
+            int height = imagen.getHeight();
+
+            if (width <= 0 || height <= 0) {
+                return null;
+            }
+
+            double scale = (double) maxHeight / height;
+            int scaledWidth = (int) Math.round(width * scale);
+            int scaledHeight = (int) Math.round(height * scale);
+
+            if (scaledWidth > maxWidth) {
+                scale = (double) maxWidth / width;
+                scaledWidth = (int) Math.round(width * scale);
+                scaledHeight = (int) Math.round(height * scale);
+            }
+
+            Image escalada = imagen.getScaledInstance(scaledWidth, scaledHeight, Image.SCALE_SMOOTH);
+            return new ImageIcon(escalada);
+        } catch (IOException e) {
+            return null;
+        }
     }
 
     private JPanel crearPanelCaracteristicas() {
