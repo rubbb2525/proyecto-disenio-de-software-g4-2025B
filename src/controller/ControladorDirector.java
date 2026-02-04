@@ -370,6 +370,28 @@ public ResultadoOperacion registrarTecnico(TecnicoInvestigacion tecnico) {
     }
 
     /**
+     * NUEVO: Obtiene asistentes del proyecto
+     */
+    public List<AsistenteInvestigacion> obtenerAsistentesProyecto() {
+        Proyectos proyecto = obtenerProyectoDelDirector();
+        if (proyecto == null) {
+            return new java.util.ArrayList<>();
+        }
+        return asistenteDAO.buscarPorProyecto(proyecto.getCodigoProyecto());
+    }
+
+    /**
+     * NUEVO: Obtiene técnicos del proyecto
+     */
+    public List<TecnicoInvestigacion> obtenerTecnicosProyecto() {
+        Proyectos proyecto = obtenerProyectoDelDirector();
+        if (proyecto == null) {
+            return new java.util.ArrayList<>();
+        }
+        return tecnicoDAO.buscarPorProyecto(proyecto.getCodigoProyecto());
+    }
+
+    /**
      * NUEVO: Verifica si el director puede crear un proyecto
      * 
      * @return true si el director no tiene proyecto activo, false en caso contrario

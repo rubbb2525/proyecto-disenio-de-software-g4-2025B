@@ -322,29 +322,13 @@ public class ControladorJefaDepartamento {
      * NUEVO: Obtiene asistentes de un proyecto
      */
     public List<AsistenteInvestigacion> obtenerAsistentesProyecto(String codigoProyecto) {
-        List<AsistenteInvestigacion> todos = asistenteDAO.listarTodos();
-        List<AsistenteInvestigacion> resultado = new java.util.ArrayList<>();
-        for (AsistenteInvestigacion a : todos) {
-            if (a.getProyectoAsignado() != null && 
-                a.getProyectoAsignado().getCodigoProyecto().equals(codigoProyecto)) {
-                resultado.add(a);
-            }
-        }
-        return resultado;
+        return asistenteDAO.buscarPorProyecto(codigoProyecto);
     }
 
     /**
      * NUEVO: Obtiene técnicos de un proyecto
      */
     public List<TecnicoInvestigacion> obtenerTecnicosProyecto(String codigoProyecto) {
-        List<TecnicoInvestigacion> todos = tecnicoDAO.listarTodos();
-        List<TecnicoInvestigacion> resultado = new java.util.ArrayList<>();
-        for (TecnicoInvestigacion t : todos) {
-            if (t.getProyectoAsignado() != null && 
-                t.getProyectoAsignado().getCodigoProyecto().equals(codigoProyecto)) {
-                resultado.add(t);
-            }
-        }
-        return resultado;
+        return tecnicoDAO.buscarPorProyecto(codigoProyecto);
     }
 }

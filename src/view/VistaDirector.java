@@ -41,6 +41,10 @@ public class VistaDirector extends JFrame {
     private JLabel lblCuposDisponibles;
     private ControladorDirector controlador;
     private AdvancedTableModel modeloTabla;
+    private AdvancedTableModel modeloAsistentes;
+    private AdvancedTableModel modeloTecnicos;
+    private JTable tablaAsistentes;
+    private JTable tablaTecnicos;
     private JTextField campoBusqueda;
     private javax.swing.Timer timerRefresh;
     private PanelEstadistica panelTotalAyudantes;
@@ -227,10 +231,12 @@ public class VistaDirector extends JFrame {
             panelCuposDisponibles.actualizarValor(String.valueOf(proyecto.getCuposDisponibles()));
         }
         
-        actualizarTabla();
+        actualizarTablaAyudantes();
+        actualizarTablaAsistentes();
+        actualizarTablaTecnicos();
     }
 
-    private void actualizarTabla() {
+    private void actualizarTablaAyudantes() {
         modeloTabla.limpiar();
         
         java.util.List<Ayudante> ayudantes = controlador.consultarAyudantesDelProyecto();
@@ -259,6 +265,51 @@ public class VistaDirector extends JFrame {
             modeloTabla.establecerDatos(filas);
         }
         campoBusqueda.setText("");
+    }
+
+    private void actualizarTablaAsistentes() {
+        modeloAsistentes.limpiar();
+        
+        java.util.List<AsistenteInvestigacion> asistentes = controlador.obtenerAsistentesProyecto();
+        if (asistentes != null && !asistentes.isEmpty()) {
+            java.util.List<Object[]> filas = new java.util.ArrayList<>();
+            for (AsistenteInvestigacion a : asistentes) {
+                if (a.esActivo()) {
+                    Object[] fila = {
+                        a.getCodigoUnico(),
+                        a.getNombresCompletos(),
+                        a.getCarrera(),
+                        a.getNivel(),
+                        String.format("%.2f", a.getIRA()),
+                        a.getHorasSemanales(),
+                        String.format("$%.2f", a.calcularCostoTotal())
+                    };
+                    filas.add(fila);
+                }
+            }
+            modeloAsistentes.establecerDatos(filas);
+        }
+    }
+
+    private void actualizarTablaTecnicos() {
+        modeloTecnicos.limpiar();
+        
+        java.util.List<TecnicoInvestigacion> tecnicos = controlador.obtenerTecnicosProyecto();
+        if (tecnicos != null && !tecnicos.isEmpty()) {
+            java.util.List<Object[]> filas = new java.util.ArrayList<>();
+            for (TecnicoInvestigacion t : tecnicos) {
+                if (t.esActivo()) {
+                    Object[] fila = {
+                        t.getIdTecnico(),
+                        t.getNombresCompletos(),
+                        t.getHorasSemanales(),
+                        String.format("$%.2f", t.calcularCostoTotal())
+                    };
+                    filas.add(fila);
+                }
+            }
+            modeloTecnicos.establecerDatos(filas);
+        }
     }
 
     public void mostrarVentana() {
@@ -381,9 +432,8 @@ public class VistaDirector extends JFrame {
     }
 
     private JPanel crearPanelTabla() {
-        JPanel panelTabla = new JPanel();
+        JPanel panelTabla = new JPanel(new BorderLayout());
         panelTabla.setBackground(COLOR_FONDO);
-        panelTabla.setLayout(new BoxLayout(panelTabla, BoxLayout.Y_AXIS));
 
         // Barra de búsqueda
         JPanel panelBusqueda = new JPanel(new BorderLayout(ConstantesVisuales.PADDING_MD, 0));
@@ -407,28 +457,58 @@ public class VistaDirector extends JFrame {
         
         panelBusqueda.add(lblBuscar, BorderLayout.WEST);
         panelBusqueda.add(campoBusqueda, BorderLayout.CENTER);
-        panelTabla.add(panelBusqueda);
-        panelTabla.add(Box.createVerticalStrut(ConstantesVisuales.MARGIN_ENTRE_CAMPOS));
 
-        // Tabla
-        String[] columnas = {"Código", "Nombres", "Carrera", "Nivel", "IRA", "Horas", "Salario"};
-        modeloTabla = new AdvancedTableModel(columnas);
-        tablaAyudantes = new JTable(modeloTabla);
-        tablaAyudantes.setRowHeight(ConstantesVisuales.ALTURA_CAMPO_TEXTO);
-        tablaAyudantes.setFont(ConstantesVisuales.FUENTE_NORMAL);
-        tablaAyudantes.setForeground(COLOR_TEXTO);
-        tablaAyudantes.setSelectionBackground(ConstantesVisuales.COLOR_SECUNDARIO_CLARO);
-        tablaAyudantes.setGridColor(COLOR_BORDE);
+        // Crear tabs
+        JTabbedPane tabs = new JTabbedPane();
+        tabs.setBackground(COLOR_FONDO);
+        tabs.setFont(ConstantesVisuales.FUENTE_NORMAL);
+        
+        // Tab Ayudantes
+        String[] columnasAyudantes = {"Código", "Nombres", "Carrera", "Nivel", "IRA", "Horas", "Salario"};
+        modeloTabla = new AdvancedTableModel(columnasAyudantes);
+        tablaAyudantes = crearTablaEstilizada(modeloTabla);
+        JScrollPane scrollAyudantes = new JScrollPane(tablaAyudantes);
+        scrollAyudantes.setBorder(crearBordeTabla());
+        tabs.addTab("👥 Ayudantes", scrollAyudantes);
+        
+        // Tab Asistentes
+        String[] columnasAsistentes = {"Código", "Nombres", "Carrera", "Nivel", "IRA", "Horas", "Salario"};
+        modeloAsistentes = new AdvancedTableModel(columnasAsistentes);
+        tablaAsistentes = crearTablaEstilizada(modeloAsistentes);
+        JScrollPane scrollAsistentes = new JScrollPane(tablaAsistentes);
+        scrollAsistentes.setBorder(crearBordeTabla());
+        tabs.addTab("🔬 Asistentes", scrollAsistentes);
+        
+        // Tab Técnicos
+        String[] columnasTecnicos = {"ID", "Nombres", "Horas", "Salario"};
+        modeloTecnicos = new AdvancedTableModel(columnasTecnicos);
+        tablaTecnicos = crearTablaEstilizada(modeloTecnicos);
+        JScrollPane scrollTecnicos = new JScrollPane(tablaTecnicos);
+        scrollTecnicos.setBorder(crearBordeTabla());
+        tabs.addTab("⚙️ Técnicos", scrollTecnicos);
+        
+        panelTabla.add(panelBusqueda, BorderLayout.NORTH);
+        panelTabla.add(tabs, BorderLayout.CENTER);
+        return panelTabla;
+    }
+
+    private JTable crearTablaEstilizada(AdvancedTableModel modelo) {
+        JTable tabla = new JTable(modelo);
+        tabla.setRowHeight(ConstantesVisuales.ALTURA_CAMPO_TEXTO);
+        tabla.setFont(ConstantesVisuales.FUENTE_NORMAL);
+        tabla.setForeground(COLOR_TEXTO);
+        tabla.setSelectionBackground(ConstantesVisuales.COLOR_SECUNDARIO_CLARO);
+        tabla.setGridColor(COLOR_BORDE);
         
         // Estilizar header
-        JTableHeader th = tablaAyudantes.getTableHeader();
+        JTableHeader th = tabla.getTableHeader();
         th.setBackground(ConstantesVisuales.COLOR_PRIMARIO);
         th.setForeground(Color.WHITE);
         th.setFont(ConstantesVisuales.FUENTE_NEGRITA);
         th.setPreferredSize(new Dimension(0, 40));
         
         // Diseño alternado
-        tablaAyudantes.setDefaultRenderer(Object.class, new javax.swing.table.DefaultTableCellRenderer() {
+        tabla.setDefaultRenderer(Object.class, new javax.swing.table.DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, 
                                                           boolean hasFocus, int row, int column) {
@@ -440,17 +520,17 @@ public class VistaDirector extends JFrame {
             }
         });
         
-        JScrollPane scroll = new JScrollPane(tablaAyudantes);
-        scroll.setBorder(BorderFactory.createCompoundBorder(
+        return tabla;
+    }
+
+    private javax.swing.border.Border crearBordeTabla() {
+        return BorderFactory.createCompoundBorder(
             new RoundedBorder(ConstantesVisuales.RADIO_BORDE_MEDIO, COLOR_BORDE, 1),
             BorderFactory.createEmptyBorder(ConstantesVisuales.PADDING_XXS, 
                                            ConstantesVisuales.PADDING_XXS, 
                                            ConstantesVisuales.PADDING_XXS, 
                                            ConstantesVisuales.PADDING_XXS)
-        ));
-        
-        panelTabla.add(scroll);
-        return panelTabla;
+        );
     }
 
     private JPanel crearPanelAcciones() {
