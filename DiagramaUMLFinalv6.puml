@@ -392,15 +392,21 @@ note top of MiembroEPN
 end note
 
 legend bottom right
-  <b>RESUMEN VISUAL</b>
-  • Azul: Entidades de Dominio
-  • Naranja: Controladores
-  • Amarillo: Persistencia (DAOs)
-  • Verde: Servicios
-  • Morado: Enums
+  <b>RESUMEN DEL SISTEMA</b>
   
-  <b>Modificación:</b> Se eliminaron los subtextos <<Entidad>>, <<Controlador>>, etc.
-  manteniendo únicamente <<interface>> por ser estándar de lenguaje.
+  <b>Arquitectura:</b>
+  • Controladores: 3
+  • Entidades: 13 (inc. DTO)
+  • DAOs: 8 + 1 interfaz + InitBD
+  
+  <b>Tipos de Personal:</b>
+  1. Ayudante (hereda de MiembroEPN)
+  2. Asistente (hereda de MiembroEPN)
+  3. Técnico (Externo, no hereda de MiembroEPN)
+  
+  <b>Relación Proyecto:</b>
+  • Se utiliza Agregación (diamante vacío)
+  • El proyecto no es dueño de la existencia física de los miembros.
 end legend
 
 @enduml
