@@ -23,7 +23,7 @@ public class AsistenteInvestigacion extends Ayudante {
     @Override
     public String toString() {
         return "AsistenteInvestigacion{" +
-                "codigo=" + codigoUnico +
+                "codigo=" + getCodigoUnico() +
                 ", nombres=" + getNombresCompletos() +
                 ", meses=" + getMesesContratados() +
                 '}';

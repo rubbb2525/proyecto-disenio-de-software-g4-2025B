@@ -106,6 +106,9 @@ public class TecnicoInvestigacion {
     }
 
     public void setHorasSemanales(int horasSemanales) {
+        if (horasSemanales < 1 || horasSemanales > 40) {
+            throw new IllegalArgumentException("Las horas semanales deben estar entre 1 y 40");
+        }
         this.horasSemanales = horasSemanales;
     }
 
@@ -114,6 +117,9 @@ public class TecnicoInvestigacion {
     }
 
     public void setMesesContratados(int mesesContratados) {
+        if (mesesContratados < 1 || mesesContratados > 12) {
+            throw new IllegalArgumentException("Los meses contratados deben estar entre 1 y 12");
+        }
         this.mesesContratados = mesesContratados;
     }
 
@@ -122,6 +128,12 @@ public class TecnicoInvestigacion {
     }
 
     public void setEstado(String estado) {
+        if (estado == null || estado.trim().isEmpty()) {
+            throw new IllegalArgumentException("El estado no puede estar vacío");
+        }
+        if (!estado.matches("ACTIVO|INACTIVO")) {
+            throw new IllegalArgumentException("El estado debe ser ACTIVO o INACTIVO");
+        }
         this.estado = estado;
     }
 

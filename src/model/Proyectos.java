@@ -202,6 +202,9 @@ public class Proyectos {
     }
 
     public void setCodigoProyecto(String codigoProyecto) {
+        if (codigoProyecto == null || codigoProyecto.trim().isEmpty()) {
+            throw new IllegalArgumentException("El código del proyecto no puede estar vacío");
+        }
         this.codigoProyecto = codigoProyecto;
     }
 
@@ -210,6 +213,9 @@ public class Proyectos {
     }
 
     public void setNombreProyecto(String nombreProyecto) {
+        if (nombreProyecto == null || nombreProyecto.trim().isEmpty()) {
+            throw new IllegalArgumentException("El nombre del proyecto no puede estar vacío");
+        }
         this.nombreProyecto = nombreProyecto;
     }
 
@@ -226,6 +232,9 @@ public class Proyectos {
     }
 
     public void setFechaInicio(Date fechaInicio) {
+        if (fechaInicio == null) {
+            throw new IllegalArgumentException("La fecha de inicio no puede ser nula");
+        }
         this.fechaInicio = fechaInicio;
     }
 
@@ -234,6 +243,12 @@ public class Proyectos {
     }
 
     public void setFechaFin(Date fechaFin) {
+        if (fechaFin == null) {
+            throw new IllegalArgumentException("La fecha de fin no puede ser nula");
+        }
+        if (this.fechaInicio != null && fechaFin.before(this.fechaInicio)) {
+            throw new IllegalArgumentException("La fecha de fin no puede ser anterior a la fecha de inicio");
+        }
         this.fechaFin = fechaFin;
     }
 
@@ -242,6 +257,12 @@ public class Proyectos {
     }
 
     public void setEstado(String estado) {
+        if (estado == null || estado.trim().isEmpty()) {
+            throw new IllegalArgumentException("El estado del proyecto no puede estar vacío");
+        }
+        if (!estado.matches("ACTIVO|INACTIVO|SUSPENDIDO")) {
+            throw new IllegalArgumentException("El estado debe ser ACTIVO, INACTIVO o SUSPENDIDO");
+        }
         this.estado = estado;
     }
 

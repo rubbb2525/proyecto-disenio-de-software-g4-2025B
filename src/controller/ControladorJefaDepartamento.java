@@ -3,6 +3,7 @@ package controller;
 import model.*;
 import model.dao.*;
 import model.service.ServicioDeEstadisticas;
+import model.service.ServicioDeReportes;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
@@ -159,14 +160,14 @@ public class ControladorJefaDepartamento {
      * Genera un reporte general
      * 
      * REFACTORIZACIÓN:
-    * - JefaDepartamento genera reportes
-     * - Los servicios hacen el trabajo específico
+     * - Usa ServicioDeReportes para generar reportes
+     * - JefaDepartamento solo maneja datos de usuario y notificaciones
      */
     public Reporte generarReporteGeneral() {
         List<Proyectos> proyectos = proyectoDAO.listarTodos();
         List<Ayudante> ayudantes = ayudanteDAO.listarTodos();
 
-        return jefaDepartamento.generarReporteGeneral(proyectos, ayudantes);
+        return ServicioDeReportes.generarReporteGeneral(proyectos, ayudantes);
     }
 
     /**
@@ -177,7 +178,7 @@ public class ControladorJefaDepartamento {
         if (proyecto == null) {
             return null;
         }
-        return jefaDepartamento.generarReportePorProyecto(proyecto);
+        return ServicioDeReportes.generarReportePorProyecto(proyecto);
     }
 
     /**
@@ -186,7 +187,7 @@ public class ControladorJefaDepartamento {
     public Reporte generarReportePorCarrera(String carrera) {
         List<Ayudante> ayudantes = ayudanteDAO.listarTodos();
 
-        return jefaDepartamento.generarReportePorCarrera(carrera, ayudantes);
+        return ServicioDeReportes.generarReportePorCarrera(carrera, ayudantes);
     }
 
     /**
@@ -195,7 +196,7 @@ public class ControladorJefaDepartamento {
     public Reporte generarReportePorNivel(int nivel) {
         List<Ayudante> ayudantes = ayudanteDAO.listarTodos();
 
-        return jefaDepartamento.generarReportePorNivel(nivel, ayudantes);
+        return ServicioDeReportes.generarReportePorNivel(nivel, ayudantes);
     }
 
     /**

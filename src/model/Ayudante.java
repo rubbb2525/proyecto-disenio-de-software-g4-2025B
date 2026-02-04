@@ -38,7 +38,7 @@ public class Ayudante extends MiembroEPN {
      */
     @Override
     public boolean esActivo() {
-        return "ACTIVO".equals(estado) && fechaFinalizacion == null;
+        return "ACTIVO".equals(getEstado()) && fechaFinalizacion == null;
     }
 
     /**
@@ -75,7 +75,7 @@ public class Ayudante extends MiembroEPN {
         }
 
         // Aplicar baja
-        this.estado = "INACTIVO";
+        setEstado("INACTIVO");
         this.motivoSalida = motivo;
         this.fechaFinalizacion = fecha;
 
@@ -146,6 +146,9 @@ public class Ayudante extends MiembroEPN {
     }
 
     public void setProyectoAsignado(Proyectos proyectoAsignado) {
+        if (proyectoAsignado != null && !proyectoAsignado.tieneEstadoActivo()) {
+            throw new IllegalArgumentException("No se puede asignar un proyecto inactivo");
+        }
         this.proyectoAsignado = proyectoAsignado;
     }
 

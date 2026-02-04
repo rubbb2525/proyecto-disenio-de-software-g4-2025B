@@ -1,0 +1,712 @@
+@startuml DiagramaClases_Sistema_Completo
+
+' ═══════════════════════════════════════════════════════════════
+' DIAGRAMA DE CLASES - SISTEMA COMPLETO
+' Sistema de Gestión de Ayudantes, Asistentes y Técnicos de Investigación
+' Facultad de Ingeniería de Sistemas - EPN
+' Versión 3.0 - Actualizado Febrero 2026 (Con Contratación Completa)
+' ═══════════════════════════════════════════════════════════════
+
+skinparam classAttributeIconSize 0
+skinparam shadowing true
+skinparam linetype ortho
+skinparam nodesep 120
+skinparam ranksep 150
+skinparam backgroundcolor transparent
+skinparam padding 5
+
+' Paleta de colores profesional
+skinparam class {
+    BackgroundColor<<Entidad>> #E3F2FD
+    BackgroundColor<<DAO>> #FFF9C4
+    BackgroundColor<<Servicio>> #C8E6C9
+    BackgroundColor<<Controlador>> #FFE0B2
+    BackgroundColor<<Enum>> #F3E5F5
+    BackgroundColor<<DTO>> #F5F5F5
+    BackgroundColor<<Externa>> #FFCCBC
+    BorderColor #1976D2
+    ArrowColor #424242
+    FontSize 11
+}
+
+title \n<size:20><b>SISTEMA DE GESTIÓN DE AYUDANTES DE INVESTIGACIÓN</b></size>\n<size:14>Arquitectura Completa - Modelo de Dominio y Persistencia</size>\n<size:12>Con Sistema de Contratación: Profesional (Asistentes) y Técnica (Ayudantes/Técnicos)</size>\n
+
+' ═════════════════════════════════════════════════════════════
+' CAPA DE CONTROLADORES (ARRIBA)
+' ═════════════════════════════════════════════════════════════
+
+package "🎮 Capa de Controladores" <<Rectangle>> {
+  
+  class ControladorAutenticacion <<Controlador>> {
+    - usuarioActual : MiembroEPN
+    __
+    + autenticar(correo: String, password: String) : ResultadoOperacion
+    + getUsuarioActual() : MiembroEPN
+    + cerrarSesion() : void
+  }
+  
+  class ControladorDirector <<Controlador>> {
+    - directorActual : Director
+    - jefaDepartamento : JefaDepartamento
+    - ayudanteDAO : AyudanteDAO
+    - asistenteDAO : AsistenteDAO
+    - tecnicoDAO : TecnicoDAO
+    - estudianteDAO : EstudianteDAO
+    - proyectoDAO : ProyectoDAO
+    - notificacionDAO : NotificacionDAO
+    __
+    + obtenerProyectoDelDirector() : Proyectos
+    + buscarEstudiante(criterio: String) : Estudiante
+    + registrarAyudante(codigo, horas, meses) : ResultadoOperacion
+    + registrarAsistente(codigo, horas, meses) : ResultadoOperacion
+    + registrarTecnico(tecnico: TecnicoInvestigacion) : ResultadoOperacion
+    + darDeBajaAyudante(codigo, motivo, fecha) : ResultadoOperacion
+    + darDeBajaAsistente(codigo, motivo, fecha) : ResultadoOperacion
+    + darDeBajaTecnico(id, motivo, fecha) : ResultadoOperacion
+    + consultarAyudantesDelProyecto() : List<Ayudante>
+    + consultarAsistentesDelProyecto() : List<AsistenteInvestigacion>
+    + consultarTecnicosDelProyecto() : List<TecnicoInvestigacion>
+    + obtenerAyudantesActivos() : List<Ayudante>
+    + obtenerEstadisticasProyecto() : Map<String,Object>
+    + obtenerNombreProyecto() : String
+    + obtenerCuposDisponibles() : int
+  }
+  
+  class ControladorJefaDepartamento <<Controlador>> {
+    - jefa : JefaDepartamento
+    __
+    + consultarTodosLosProyectos() : List<Proyectos>
+    + filtrarAyudantes(filtros: Map) : List<Ayudante>
+    + filtrarAsistentes(filtros: Map) : List<AsistenteInvestigacion>
+    + filtrarTecnicos(filtros: Map) : List<TecnicoInvestigacion>
+    + obtenerNotificaciones() : List<Notificacion>
+    + marcarNotificacionLeida(id: String) : void
+    + generarReporte(tipo: String) : Reporte
+    + obtenerEstadisticasGenerales() : Map<String,Object>
+  }
+}
+
+' ═════════════════════════════════════════════════════════════
+' CAPA DE DOMINIO - JERARQUÍA DE USUARIOS
+' ═════════════════════════════════════════════════════════════
+
+package "📦 Capa de Dominio - Usuarios" <<Rectangle>> {
+  
+  abstract class MiembroEPN <<Entidad>> {
+    # codigoUnico : String
+    # cedula : String
+    # correoInstitucional : String
+    # password : String
+    # nombres : String
+    # apellidos : String
+    # telefono : String
+    # rol : String
+    # estado : String
+    __
+    + getNombresCompletos() : String
+    + autenticar(password: String) : boolean
+    + esActivo() : boolean
+  }
+  
+  class Director <<Entidad>> {
+    __
+    + toString() : String
+  }
+  
+  class JefaDepartamento <<Entidad>> {
+    - {static} instancia : JefaDepartamento
+    - notificaciones : List<Notificacion>
+    __
+    + {static} getInstancia() : JefaDepartamento
+    + recibirNotificacion(notif: Notificacion) : void
+    + getNotificacionesNoLeidas() : List<Notificacion>
+    + marcarTodasComoLeidas() : void
+    + getContadorNoLeidas() : int
+  }
+  
+  class Estudiante <<Entidad>> {
+    - carrera : String
+    - IRA : float
+    - nivel : int
+    __
+    + esElegibleParaAyudantia() : boolean
+    + validarConversionAyudante(horas, meses) : ResultadoOperacion
+    + validarConversionAsistente(horas, meses) : ResultadoOperacion
+    + convertirAAyudante(proyecto, horas, meses) : Ayudante
+    + convertirAAsistente(proyecto, horas, meses) : AsistenteInvestigacion
+    + esValido() : boolean
+  }
+  
+  class Ayudante <<Entidad>> {
+    - carrera : String
+    - nivel : int
+    - IRA : float
+    - horasSemanales : int
+    - mesesContratados : int
+    - fechaRegistro : Date
+    - fechaFinalizacion : Date
+    - motivoSalida : String
+    - proyectoAsignado : Proyectos
+    __
+    + esActivo() : boolean
+    + darDeBaja(motivo, fecha) : ResultadoOperacion
+    + calcularCostoTotal() : double
+    + {static} filtrar(ayudantes, filtros) : List<Ayudante>
+    + {static} obtenerActivos(ayudantes) : List<Ayudante>
+    + {static} obtenerInactivos(ayudantes) : List<Ayudante>
+    + {static} porCarrera(ayudantes, carrera) : List<Ayudante>
+    + {static} porNivel(ayudantes, nivel) : List<Ayudante>
+  }
+  
+  class AsistenteInvestigacion <<Entidad>> {
+    - carrera : String
+    - nivel : int
+    - IRA : float
+    - horasSemanales : int
+    - mesesContratados : int
+    - fechaRegistro : Date
+    - fechaFinalizacion : Date
+    - motivoSalida : String
+    - proyectoAsignado : Proyectos
+    __
+    + toString() : String
+  }
+}
+
+' ═════════════════════════════════════════════════════════════
+' CAPA DE DOMINIO - PERSONAL EXTERNO Y PROYECTOS
+' ═════════════════════════════════════════════════════════════
+
+package "📦 Capa de Dominio - Proyectos y Personal Externo" <<Rectangle>> {
+  
+  class TecnicoInvestigacion <<Externa>> {
+    - idTecnico : String
+    - cedula : String
+    - correoElectronico : String
+    - nombres : String
+    - apellidos : String
+    - telefono : String
+    - horasSemanales : int
+    - mesesContratados : int
+    - estado : String
+    - fechaRegistro : Date
+    - fechaFinalizacion : Date
+    - motivoSalida : String
+    - proyectoAsignado : Proyectos
+    __
+    + getNombresCompletos() : String
+    + esActivo() : boolean
+    + calcularCostoTotal() : double
+    + getEstado() : String
+    + setEstado(estado: String) : void
+    + getFechaRegistro() : Date
+  }
+  
+  class Proyectos <<Entidad>> {
+    - codigoProyecto : String
+    - nombreProyecto : String
+    - descripcion : String
+    - fechaInicio : Date
+    - fechaFin : Date
+    - estado : String
+    - tipoProyecto : TipoProyecto
+    - categoriaProyecto : CategoriaProyecto
+    - ayudantesPlanificados : int
+    - tecnicosPlanificados : int
+    - asistentesPlanificados : int
+    - director : Director
+    __
+    + agregarAyudante(ayudante: Ayudante) : boolean
+    + agregarAsistente(asistente: AsistenteInvestigacion) : boolean
+    + agregarTecnico(tecnico: TecnicoInvestigacion) : boolean
+    + getAyudantesActivos() : int
+    + getAsistentesActivos() : int
+    + getTecnicosActivos() : int
+    + tieneCupoDisponible() : boolean
+  }
+  
+  enum TipoProyecto <<Enum>> {
+    INTERNO
+    SEMILLA
+    GRUPAL
+    MULTIDISCIPLINARIO
+    VINCULACION_CON_FINANCIAMIENTO
+    TRANSFERENCIA_TECNOLOGICA
+    TRANSFERENCIA
+    VINCULACION
+  }
+  
+  enum CategoriaProyecto <<Enum>> {
+    INVESTIGACION
+    VINCULACION
+    TRANSFERENCIA_TECNOLOGICA
+  }
+  
+  class Notificacion <<Entidad>> {
+    - idNotificacion : String
+    - fecha : Date
+    - mensaje : String
+    - tipo : String
+    - leida : boolean
+    - proyectoRelacionado : Proyectos
+    - ayudanteRelacionado : Ayudante
+    __
+    + marcarComoLeida() : void
+    + esLeida() : boolean
+    + {static} crearRegistroAyudante(ayudante, proyecto) : Notificacion
+    + {static} crearBajaAyudante(ayudante, motivo) : Notificacion
+    + {static} crearRegistroAsistente(asistente, proyecto) : Notificacion
+    + {static} crearRegistroTecnico(tecnico, proyecto) : Notificacion
+  }
+  
+  class Reporte <<Entidad>> {
+    - idReporte : String
+    - fechaGeneracion : Date
+    - tipo : String
+    - titulo : String
+    - contenido : String
+    - estadisticas : Map<String,Object>
+    __
+    + exportarPDF() : File
+    + generarContenido() : String
+  }
+  
+  class ResultadoOperacion <<DTO>> {
+    - exitoso : boolean
+    - mensaje : String
+    - errores : List<String>
+    __
+    + esExitoso() : boolean
+    + getMensaje() : String
+    + agregarError(error: String) : void
+    + {static} exitoso(mensaje: String) : ResultadoOperacion
+    + {static} fallido(mensaje, error: String) : ResultadoOperacion
+    + {static} noEncontrado(entidad, campo: String) : ResultadoOperacion
+    + {static} errorPersistencia(operacion: String) : ResultadoOperacion
+  }
+}
+
+' ═════════════════════════════════════════════════════════════
+' CAPA DE SERVICIOS
+' ═════════════════════════════════════════════════════════════
+
+package "⚙️ Capa de Servicios" <<Rectangle>> {
+  
+  class ServicioDeEstadisticas <<Servicio>> {
+    __
+    + {static} calcularTodas(ayudantes: List) : Map
+    + {static} contarPorCarrera(ayudantes: List) : Map
+    + {static} contarPorNivel(ayudantes: List) : Map
+    + {static} calcularPromedioIRA(ayudantes: List) : double
+    + {static} calcularTotalHoras(ayudantes: List) : int
+    + {static} calcularCostoTotal(ayudantes: List) : double
+  }
+}
+
+' ═════════════════════════════════════════════════════════════
+' CAPA DE PERSISTENCIA (DAOs)
+' ═════════════════════════════════════════════════════════════
+
+package "💾 Capa de Persistencia - DAOs" <<Rectangle>> {
+  
+  interface IDAO<T> <<DAO>> {
+    + guardar(objeto: T) : boolean
+    + buscarPorId(id: String) : T
+    + listarTodos() : List<T>
+    + actualizar(objeto: T) : boolean
+    + eliminar(id: String) : boolean
+  }
+  
+  class ConexionBD <<DAO>> {
+    - {static} instancia : ConexionBD
+    - conexion : Connection
+    __
+    + {static} getInstancia() : ConexionBD
+    + getConexion() : Connection
+  }
+  
+  class MiembroEPNDAO <<DAO>> {
+    __
+    + buscarPorCorreo(correo: String) : MiembroEPN
+    + buscarPorRol(rol: String) : List<MiembroEPN>
+    + autenticar(correo, password) : MiembroEPN
+  }
+  
+  class EstudianteDAO <<DAO>> {
+    __
+    + buscarPorCriterio(criterio: String) : Estudiante
+    + buscarPorCodigo(codigo: String) : Estudiante
+    + buscarPorCedula(cedula: String) : Estudiante
+    + buscarElegibles() : List<Estudiante>
+  }
+  
+  class AyudanteDAO <<DAO>> {
+    __
+    + buscarPorProyecto(codigoProyecto: String) : List<Ayudante>
+    + buscarActivos() : List<Ayudante>
+    + buscarPorCarrera(carrera: String) : List<Ayudante>
+    + buscarPorCodigo(codigo: String) : Ayudante
+  }
+  
+  class AsistenteDAO <<DAO>> {
+    __
+    + buscarPorProyecto(codigoProyecto: String) : List<AsistenteInvestigacion>
+    + buscarActivos() : List<AsistenteInvestigacion>
+    + buscarPorCodigo(codigo: String) : AsistenteInvestigacion
+  }
+  
+  class TecnicoDAO <<DAO>> {
+    __
+    + buscarPorProyecto(codigoProyecto: String) : List<TecnicoInvestigacion>
+    + buscarActivos() : List<TecnicoInvestigacion>
+    + generarIdTecnico() : String
+  }
+  
+  class ProyectoDAO <<DAO>> {
+    __
+    + buscarPorDirector(codigoUnico: String) : Proyectos
+    + buscarPorCodigo(codigo: String) : Proyectos
+    + listarActivos() : List<Proyectos>
+  }
+  
+  class NotificacionDAO <<DAO>> {
+    __
+    + buscarNoLeidas() : List<Notificacion>
+    + marcarComoLeida(idNotificacion: String) : boolean
+  }
+  
+  class InitBD <<DAO>> {
+    __
+    + {static} inicializar() : void
+    + {static} verificarTablas() : boolean
+  }
+}
+
+' ═════════════════════════════════════════════════════════════
+' RELACIONES DE HERENCIA (Verticales claras)
+' ═════════════════════════════════════════════════════════════
+
+MiembroEPN <|-- Director
+MiembroEPN <|-- JefaDepartamento
+MiembroEPN <|-- Estudiante
+MiembroEPN <|-- Ayudante
+Ayudante <|-- AsistenteInvestigacion
+
+' ═════════════════════════════════════════════════════════════
+' IMPLEMENTACIÓN DE INTERFAZ
+' ═════════════════════════════════════════════════════════════
+
+IDAO <|.. MiembroEPNDAO
+IDAO <|.. EstudianteDAO
+IDAO <|.. AyudanteDAO
+IDAO <|.. AsistenteDAO
+IDAO <|.. TecnicoDAO
+IDAO <|.. ProyectoDAO
+IDAO <|.. NotificacionDAO
+
+' ═════════════════════════════════════════════════════════════
+' ASOCIACIONES DE DOMINIO (Entidades)
+' ═════════════════════════════════════════════════════════════
+
+Director "1" o-right- "0..1" Proyectos : gestiona >
+Proyectos "1" o-down- "0..*" Ayudante : tiene >
+Proyectos "1" o-down- "0..*" AsistenteInvestigacion : tiene >
+Proyectos "1" o-right- "0..*" TecnicoInvestigacion : tiene >
+Proyectos "1" -right- "1" TipoProyecto
+Proyectos "1" -right- "1" CategoriaProyecto
+
+JefaDepartamento "1" *-down- "0..*" Notificacion : recibe >
+Notificacion "0..*" -right-> "0..1" Proyectos : relacionada con >
+Notificacion "0..*" -right-> "0..1" Ayudante : sobre >
+
+' ═════════════════════════════════════════════════════════════
+' RELACIONES CONTROLADOR → DAO (Uso)
+' ═════════════════════════════════════════════════════════════
+
+ControladorAutenticacion .down.> MiembroEPNDAO : << usa >>
+ControladorAutenticacion .down.> EstudianteDAO : << usa >>
+
+ControladorDirector .down.> AyudanteDAO : << usa >>
+ControladorDirector .down.> AsistenteDAO : << usa >>
+ControladorDirector .down.> TecnicoDAO : << usa >>
+ControladorDirector .down.> EstudianteDAO : << usa >>
+ControladorDirector .down.> ProyectoDAO : << usa >>
+ControladorDirector .down.> NotificacionDAO : << usa >>
+
+ControladorJefaDepartamento .down.> AyudanteDAO : << usa >>
+ControladorJefaDepartamento .down.> AsistenteDAO : << usa >>
+ControladorJefaDepartamento .down.> TecnicoDAO : << usa >>
+ControladorJefaDepartamento .down.> ProyectoDAO : << usa >>
+ControladorJefaDepartamento .down.> NotificacionDAO : << usa >>
+
+' ═════════════════════════════════════════════════════════════
+' RELACIONES CONTROLADOR → ENTIDADES (Gestiona)
+' ═════════════════════════════════════════════════════════════
+
+ControladorDirector -down-> Director : controla
+ControladorDirector -down-> JefaDepartamento : notifica
+ControladorJefaDepartamento -down-> JefaDepartamento : controla
+
+' ═════════════════════════════════════════════════════════════
+' RELACIONES DAO → ENTIDADES (Maneja)
+' ═════════════════════════════════════════════════════════════
+
+MiembroEPNDAO ..> MiembroEPN : << maneja >>
+EstudianteDAO ..> Estudiante : << maneja >>
+AyudanteDAO ..> Ayudante : << maneja >>
+AsistenteDAO ..> AsistenteInvestigacion : << maneja >>
+TecnicoDAO ..> TecnicoInvestigacion : << maneja >>
+ProyectoDAO ..> Proyectos : << maneja >>
+NotificacionDAO ..> Notificacion : << maneja >>
+
+' ═════════════════════════════════════════════════════════════
+' RELACIÓN SERVICIO (Analiza)
+' ═════════════════════════════════════════════════════════════
+
+ServicioDeEstadisticas .right.> Ayudante : << analiza >>
+ControladorDirector .up.> ServicioDeEstadisticas : << usa >>
+
+' ═════════════════════════════════════════════════════════════
+' NOTAS EXPLICATIVAS
+' ═════════════════════════════════════════════════════════════
+
+note top of MiembroEPN
+  <b>Clase Base Abstracta</b>
+  Define atributos y comportamientos
+  comunes para todos los usuarios
+  del sistema EPN
+  Tabla: miembros_epn
+end note
+
+note right of JefaDepartamento
+  <b>Patrón Singleton</b>
+  Una única instancia en el sistema
+end note
+
+note bottom of Ayudante
+  <b>Personal Universitario - Estudiantes</b>
+  Estudiantes en proyectos
+  Máximo 32 horas/semana
+  Heredan de MiembroEPN
+  Tabla: ayudantes
+  
+  <b>Métodos estáticos de filtrado:</b>
+  - filtrar()
+  - obtenerActivos()
+  - porCarrera()
+  - porNivel()
+end note
+
+note bottom of AsistenteInvestigacion
+  <b>Personal Profesional - Universitario</b>
+  Hereda de Ayudante
+  (Ayudante hereda de MiembroEPN)
+  Máximo 32 horas/semana
+  Tabla: asistentes
+  
+  <b>Importante:</b>
+  NO modifica rol en miembros_epn
+  El estudiante sigue siendo ESTUDIANTE
+end note
+
+note bottom of TecnicoInvestigacion
+  <b>Personal Externo - NO Universitario</b>
+  NO hereda de MiembroEPN
+  Máximo 40 horas/semana
+  Tabla: tecnicos
+  ID único autogenerado
+  
+  <b>Características:</b>
+  - Personal externo a la EPN
+  - No tiene código único institucional
+  - Usa id_tecnico en lugar de codigo_unico
+end note
+
+note bottom of ConexionBD
+  <b>Patrón Singleton</b>
+  Conexión única a SQLite
+  Base de datos: gestion_ayudantes.db
+end note
+
+note right of ControladorDirector
+  <b>Controlador Principal</b>
+  Gestiona 3 tipos de personal:
+  
+  <b>1. Ayudantes</b> (estudiantes)
+     - registrarAyudante()
+     - darDeBajaAyudante()
+  
+  <b>2. Asistentes</b> (profesionales)
+     - registrarAsistente()
+     - darDeBajaAsistente()
+  
+  <b>3. Técnicos</b> (externos)
+     - registrarTecnico()
+     - darDeBajaTecnico()
+  
+  <b>Sistema de Contratación:</b>
+  - Contratación Profesional → Asistentes
+  - Contratación Técnica → Ayudantes/Técnicos
+end note
+
+note left of ServicioDeEstadisticas
+  <b>Análisis Estadístico</b>
+  Métodos estáticos para
+  calcular estadísticas de:
+  • Ayudantes
+  • Proyectos
+  • Costos
+end note
+
+note top of AsistenteDAO
+  <b>Tabla: asistentes</b>
+  Inserta en tabla separada
+  NO en tabla ayudantes
+  
+  <b>Importante:</b>
+  NO actualiza rol en miembros_epn
+  Soft delete en eliminar()
+end note
+
+note top of TecnicoDAO
+  <b>Tabla: tecnicos</b>
+  Inserta en tabla separada
+  NO en tabla ayudantes
+  Genera ID único
+  
+  <b>Método especial:</b>
+  generarIdTecnico()
+  - Formato: TEC-YYYYMMDD-XXX
+end note
+
+note bottom of InitBD
+  <b>Inicialización BD</b>
+  Ejecuta schema_bd.sql
+  
+  <b>Tablas creadas:</b>
+  • miembros_epn
+  • estudiantes
+  • ayudantes
+  • asistentes
+  • tecnicos
+  • proyectos
+  • notificaciones
+  • reportes
+end note
+
+note top of Estudiante
+  <b>Conversión de Personal</b>
+  
+  <b>Métodos de validación:</b>
+  - validarConversionAyudante()
+  - validarConversionAsistente()
+  
+  <b>Métodos de conversión:</b>
+  - convertirAAyudante()
+    → Crea nuevo Ayudante
+  - convertirAAsistente()
+    → Crea nuevo AsistenteInvestigacion
+  
+  <b>Requisitos Ayudante:</b>
+  IRA ≥ 24, Nivel ≥ 3
+end note
+
+note bottom of ResultadoOperacion
+  <b>DTO para operaciones</b>
+  
+  <b>Métodos factory estáticos:</b>
+  - exitoso()
+  - fallido()
+  - noEncontrado()
+  - errorPersistencia()
+  
+  Simplifica manejo de resultados
+end note
+
+' ═════════════════════════════════════════════════════════════
+' LEYENDA
+' ═════════════════════════════════════════════════════════════
+
+legend bottom right
+  <b>RESUMEN DEL SISTEMA</b>
+  
+  <b>Arquitectura:</b>
+  • Controladores: 3
+  • Entidades: 13 (inc. DTO)
+  • DAOs: 8 + 1 interfaz + InitBD
+  • Servicios: 1
+  • Enums: 2
+  
+  <b>Patrones de Diseño:</b>
+  • MVC (Modelo-Vista-Controlador)
+  • DAO (Data Access Object)
+  • Singleton (JefaDepartamento, ConexionBD)
+  • Herencia (MiembroEPN → subclases)
+  • Factory Method (ResultadoOperacion)
+  
+  <b>Tipos de Personal:</b>
+  
+  <b>1. Ayudante</b> (estudiante, ≤32 hrs/sem)
+     - Tabla: ayudantes
+     - Hereda de: MiembroEPN
+     - Requiere: ser estudiante EPN
+     - Requisitos: IRA ≥ 24, Nivel ≥ 3
+  
+  <b>2. Asistente</b> (profesional, ≤32 hrs/sem)
+     - Tabla: asistentes
+     - Hereda de: Ayudante → MiembroEPN
+     - Personal profesional universitario
+     - NO modifica rol en miembros_epn
+  
+  <b>3. Técnico</b> (externo, ≤40 hrs/sem)
+     - Tabla: tecnicos
+     - NO hereda de MiembroEPN
+     - Personal externo a la EPN
+     - ID único: TEC-YYYYMMDD-XXX
+  
+  <b>Base de Datos:</b>
+  Motor: SQLite 3
+  Archivo: gestion_ayudantes.db
+  
+  <b>Tablas Principales:</b>
+  • miembros_epn (base de usuarios)
+  • estudiantes (datos académicos)
+  • ayudantes (estudiantes en proyectos)
+  • asistentes (profesionales en proyectos)
+  • tecnicos (personal externo)
+  • proyectos (proyectos de investigación)
+  • notificaciones (sistema de avisos)
+  
+  <b>Sistema de Contratación:</b>
+  
+  <b>Contratación Profesional:</b>
+  → Asistentes de Investigación
+  → Formulario específico
+  
+  <b>Contratación Técnica:</b>
+  → Ayudantes de Investigación
+  → Técnicos de Investigación
+  → Selección entre ambos tipos
+  
+  <b>Proceso de Inserción:</b>
+  • Ayudantes → INSERT en tabla ayudantes
+  • Asistentes → INSERT en tabla asistentes
+  • Técnicos → INSERT en tabla tecnicos
+  • NO se modifica rol en miembros_epn
+  
+  <b>Proceso de Baja:</b>
+  • Soft delete (estado = 'INACTIVO')
+  • Solo en tabla específica
+  • NO se elimina de miembros_epn
+  • NO se elimina de estudiantes
+  
+  <b>Características Clave:</b>
+  ✓ Conversión segura de Estudiante a personal
+  ✓ Validaciones en el modelo
+  ✓ Métodos estáticos de filtrado en Ayudante
+  ✓ Factory methods en ResultadoOperacion
+  ✓ Notificaciones automáticas a Jefa
+  ✓ Estadísticas vía ServicioDeEstadisticas
+end legend
+
+@enduml

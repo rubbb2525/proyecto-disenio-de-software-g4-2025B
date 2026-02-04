@@ -4,15 +4,15 @@ package model;
  * Clase base abstracta que representa a todos los miembros de la FIS-EPN
  */
 public abstract class MiembroEPN {
-    protected String codigoUnico;
-    protected String cedula;
-    protected String correoInstitucional;
-    protected String password;
-    protected String nombres;
-    protected String apellidos;
-    protected String telefono;
-    protected String rol;
-    protected String estado;
+    private String codigoUnico;
+    private String cedula;
+    private String correoInstitucional;
+    private String password;
+    private String nombres;
+    private String apellidos;
+    private String telefono;
+    private String rol;
+    private String estado;
 
     public MiembroEPN() {
     }
@@ -93,6 +93,9 @@ public abstract class MiembroEPN {
     }
 
     public void setPassword(String password) {
+        if (password == null || password.trim().isEmpty()) {
+            throw new IllegalArgumentException("La contraseña no puede estar vacía");
+        }
         this.password = password;
     }
 
@@ -133,6 +136,35 @@ public abstract class MiembroEPN {
     }
 
     public void setEstado(String estado) {
+        this.estado = estado;
+    }
+
+    // Setters protegidos para uso de subclases en construcción
+    protected void inicializarCodigoUnico(String codigoUnico) {
+        this.codigoUnico = codigoUnico;
+    }
+
+    protected void inicializarCorreo(String correo) {
+        this.correoInstitucional = correo;
+    }
+
+    protected void inicializarPassword(String pwd) {
+        this.password = pwd;
+    }
+
+    protected void inicializarNombres(String nombres) {
+        this.nombres = nombres;
+    }
+
+    protected void inicializarApellidos(String apellidos) {
+        this.apellidos = apellidos;
+    }
+
+    protected void inicializarRol(String rol) {
+        this.rol = rol;
+    }
+
+    protected void inicializarEstado(String estado) {
         this.estado = estado;
     }
 }

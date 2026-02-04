@@ -25,9 +25,9 @@ public class Director extends MiembroEPN {
      * (Ejemplo de lógica que SÍ debe estar aquí)
      */
     public boolean puedeDirigirProyecto() {
-        return "ACTIVO".equals(estado) && 
-               codigoUnico != null && 
-               !codigoUnico.isEmpty();
+        return "ACTIVO".equals(getEstado()) && 
+               getCodigoUnico() != null && 
+               !getCodigoUnico().isEmpty();
     }
 
     /**
@@ -82,9 +82,9 @@ public class Director extends MiembroEPN {
     public String toString() {
         return "Director{" +
                 "nombre='" + getNombresCompletos() + '\'' +
-                ", codigo='" + codigoUnico + '\'' +
-                ", correo='" + correoInstitucional + '\'' +
-                ", estado='" + estado + '\'' +
+                ", codigo='" + getCodigoUnico() + '\'' +
+                ", correo='" + getCorreoInstitucional() + '\'' +
+                ", estado='" + getEstado() + '\'' +
                 '}';
     }
 
@@ -92,13 +92,13 @@ public class Director extends MiembroEPN {
      * Validación básica de director
      */
     public boolean esValido() {
-        return codigoUnico != null && !codigoUnico.isEmpty() &&
-               cedula != null && !cedula.isEmpty() &&
-               correoInstitucional != null && !correoInstitucional.isEmpty() &&
-               password != null && !password.isEmpty() &&
-               nombres != null && !nombres.isEmpty() &&
-               apellidos != null && !apellidos.isEmpty() &&
-               "DIRECTOR".equals(rol) &&
-               "ACTIVO".equals(estado);
+        return getCodigoUnico() != null && !getCodigoUnico().isEmpty() &&
+               getCedula() != null && !getCedula().isEmpty() &&
+               getCorreoInstitucional() != null && !getCorreoInstitucional().isEmpty() &&
+               getPassword() != null && !getPassword().isEmpty() &&
+               getNombres() != null && !getNombres().isEmpty() &&
+               getApellidos() != null && !getApellidos().isEmpty() &&
+               "DIRECTOR".equals(getRol()) &&
+               "ACTIVO".equals(getEstado());
     }
 }

@@ -127,7 +127,7 @@ public class Estudiante extends MiembroEPN {
      * Validación básica de estudiante
      */
     public boolean esValido() {
-        return codigoUnico != null && !codigoUnico.isEmpty() &&
+        return getCodigoUnico() != null && !getCodigoUnico().isEmpty() &&
                ira >= 0 && ira <= 20 &&
                nivel >= 1 && nivel <= 10 &&
                carrera != null && !carrera.isEmpty();
@@ -142,13 +142,13 @@ public class Estudiante extends MiembroEPN {
         Ayudante ayudante = new Ayudante();
         
         // Copiar datos comunes
-        ayudante.setCodigoUnico(this.codigoUnico);
-        ayudante.setCedula(this.cedula);
-        ayudante.setCorreoInstitucional(this.correoInstitucional);
-        ayudante.setPassword(this.password);
-        ayudante.setNombres(this.nombres);
-        ayudante.setApellidos(this.apellidos);
-        ayudante.setTelefono(this.telefono);
+        ayudante.setCodigoUnico(getCodigoUnico());
+        ayudante.setCedula(getCedula());
+        ayudante.setCorreoInstitucional(getCorreoInstitucional());
+        ayudante.setPassword(getPassword());
+        ayudante.setNombres(getNombres());
+        ayudante.setApellidos(getApellidos());
+        ayudante.setTelefono(getTelefono());
         ayudante.setRol("AYUDANTE");
         ayudante.setEstado("ACTIVO");
         
@@ -173,12 +173,12 @@ public class Estudiante extends MiembroEPN {
         AsistenteInvestigacion asistente = new AsistenteInvestigacion();
 
         // Copiar datos comunes
-        asistente.setCodigoUnico(this.codigoUnico);
-        asistente.setCedula(this.cedula);
-        asistente.setCorreoInstitucional(this.correoInstitucional);
-        asistente.setNombres(this.nombres);
-        asistente.setApellidos(this.apellidos);
-        asistente.setTelefono(this.telefono);
+        asistente.setCodigoUnico(getCodigoUnico());
+        asistente.setCedula(getCedula());
+        asistente.setCorreoInstitucional(getCorreoInstitucional());
+        asistente.setNombres(getNombres());
+        asistente.setApellidos(getApellidos());
+        asistente.setTelefono(getTelefono());
         asistente.setCarrera(this.carrera);
         asistente.setNivel(this.nivel);
         asistente.setIRA(this.ira);
