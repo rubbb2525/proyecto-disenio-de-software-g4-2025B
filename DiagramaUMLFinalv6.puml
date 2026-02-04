@@ -1,0 +1,412 @@
+@startuml DiagramaClases_Sistema_Completo
+
+' ═══════════════════════════════════════════════════════════════
+' DIAGRAMA DE CLASES - SISTEMA COMPLETO
+' Sistema de Gestión de Ayudantes, Asistentes y Técnicos de Investigación
+' Facultad de Ingeniería de Sistemas - EPN
+' Versión 7.0 - Limpieza Total de Estereotipos Visuales
+' ═══════════════════════════════════════════════════════════════
+
+skinparam classAttributeIconSize 0
+skinparam shadowing true
+skinparam linetype ortho
+skinparam nodesep 120
+skinparam ranksep 150
+skinparam backgroundcolor transparent
+skinparam padding 5
+
+' Configuración de bordes y fuentes
+skinparam class {
+    BorderColor #1976D2
+    ArrowColor #424242
+    FontSize 11
+}
+
+title \n<size:20><b>SISTEMA DE GESTIÓN DE AYUDANTES DE INVESTIGACIÓN</b></size>\n<size:14>Arquitectura Completa - Limpieza de Subtextos y Colores Preservados</size>\n
+
+' ═════════════════════════════════════════════════════════════
+' CAPA DE CONTROLADORES
+' ═════════════════════════════════════════════════════════════
+
+package "Capa de Controladores" <<Rectangle>> {
+  
+  class ControladorAutenticacion #FFE0B2 {
+    - usuarioActual : MiembroEPN
+    __
+    + autenticar(correo: String, password: String) : ResultadoOperacion
+    + getUsuarioActual() : MiembroEPN
+    + cerrarSesion() : void
+  }
+  
+  class ControladorDirector #FFE0B2 {
+    - directorActual : Director
+    - jefaDepartamento : JefaDepartamento
+    - ayudanteDAO : AyudanteDAO
+    - asistenteDAO : AsistenteDAO
+    - tecnicoDAO : TecnicoDAO
+    - estudianteDAO : EstudianteDAO
+    - proyectoDAO : ProyectoDAO
+    - notificacionDAO : NotificacionDAO
+    __
+    + obtenerProyectoDelDirector() : Proyecto
+    + buscarEstudiante(criterio: String) : Estudiante
+    + registrarAyudante(codigo, horas, meses) : ResultadoOperacion
+    + registrarAsistente(codigo, horas, meses) : ResultadoOperacion
+    + registrarTecnico(tecnico: TecnicoInvestigacion) : ResultadoOperacion
+    + darDeBajaPersonal(codigo, motivo, tipo) : ResultadoOperacion
+    + consultarAyudantesDelProyecto() : List<Ayudante>
+    + consultarAsistentesDelProyecto() : List<AsistenteInvestigacion>
+    + consultarTecnicosDelProyecto() : List<TecnicoInvestigacion>
+    + obtenerEstadisticasProyecto() : Map<String,Object>
+  }
+  
+  class ControladorJefaDepartamento #FFE0B2 {
+    - jefa : JefaDepartamento
+    __
+    + consultarTodosLosProyectos() : List<Proyecto>
+    + filtrarAyudantes(filtros: Map) : List<Ayudante>
+    + obtenerNotificaciones() : List<Notificacion>
+    + marcarNotificacionLeida(id: String) : void
+    + generarReporte(tipo: String) : Reporte
+    + obtenerEstadisticasGenerales() : Map<String,Object>
+  }
+}
+
+' ═════════════════════════════════════════════════════════════
+' CAPA DE DOMINIO - JERARQUÍA DE USUARIOS
+' ═════════════════════════════════════════════════════════════
+
+package "Capa de Dominio - Usuarios" <<Rectangle>> {
+  
+  abstract class MiembroEPN #E3F2FD {
+    # codigoUnico : String
+    # cedula : String
+    # correoInstitucional : String
+    # password : String
+    # nombres : String
+    # apellidos : String
+    # telefono : String
+    # rol : String
+    # estado : String
+    __
+    + getNombresCompletos() : String
+    + autenticar(password: String) : boolean
+    + esActivo() : boolean
+  }
+  
+  class Director #E3F2FD {
+    __
+    + puedeDirigirProyecto() : boolean
+    + validarCreacionProyecto(proyectoExistente: Proyecto) : ResultadoOperacion
+    + validarRegistroAyudante(proy: Proyecto, est: Estudiante, h: int, m: int) : ResultadoOperacion
+    + validarRegistroAsistente(proy: Proyecto, est: Estudiante, h: int, m: int) : ResultadoOperacion
+    + prepararTecnico(tecnico: TecnicoInvestigacion, proy: Proyecto) : ResultadoOperacion
+    + crearProyecto(cod, nom, desc, ini, fin, tipo, ayu, tec, asi) : Proyecto
+    + esProyectoPropio(proy: Proyecto) : boolean
+    + obtenerNombreProyecto(proy: Proyecto) : String
+    + obtenerCuposDisponibles(proy: Proyecto) : int
+    + hayCupoDisponible(proy: Proyecto) : boolean
+    + esValido() : boolean
+    + toString() : String
+  }
+  
+  class JefaDepartamento #E3F2FD {
+    - {static} instancia : JefaDepartamento
+    - notificaciones : List<Notificacion>
+    __
+    + {static} getInstancia() : JefaDepartamento
+    + recibirNotificacion(notif: Notificacion) : void
+    + cargarNotificacionesDesdeBD(notifBD: List<Notificacion>) : void
+    + getNotificacionesNoLeidas() : List<Notificacion>
+    + contarNotificacionesNoLeidas() : int
+    + marcarTodasComoLeidas() : void
+    + marcarComoLeida(notif: Notificacion) : void
+    + eliminarNotificacion(notif: Notificacion) : void
+    + filtrarAyudantes(ayu: List<Ayudante>, filtros: Map) : List<Ayudante>
+    + obtenerAyudantesActivos(ayu: List<Ayudante>) : List<Ayudante>
+    + obtenerEstadisticasGenerales(ayu: List<Ayudante>) : Map
+    + obtenerResumenProyectos(proy: List<Proyecto>, ayuMap: Map) : List<Object[]>
+    + generarReporteGeneral(proy: List<Proyecto>, ayu: List<Ayudante>) : Reporte
+    + generarReportePorProyecto(proy: Proyecto) : Reporte
+    + esActivo() : boolean
+  }
+  
+  class Estudiante #E3F2FD {
+    - carrera : String
+    - IRA : float
+    - nivel : int
+    __
+    + esElegibleParaAyudantia() : boolean
+    + validarConversionAyudante(horas, meses) : ResultadoOperacion
+    + validarConversionAsistente(horas, meses) : ResultadoOperacion
+    + convertirAAyudante(proyecto, horas, meses) : Ayudante
+    + convertirAAsistente(proyecto, horas, meses) : AsistenteInvestigacion
+    + esValido() : boolean
+  }
+  
+  class Ayudante #E3F2FD {
+    - carrera : String
+    - nivel : int
+    - IRA : float
+    - horasSemanales : int
+    - mesesContratados : int
+    - fechaRegistro : Date
+    - motivoSalida : String
+    - proyectoAsignado : Proyecto
+    __
+    + esActivo() : boolean
+    + darDeBaja(motivo, fecha) : ResultadoOperacion
+    + calcularCostoTotal() : double
+    + {static} filtrar(ayudantes, filtros) : List<Ayudante>
+    + {static} obtenerActivos(ayudantes) : List<Ayudante>
+  }
+  
+  class AsistenteInvestigacion #E3F2FD {
+    - carrera : String
+    - nivel : int
+    - IRA : float
+    - horasSemanales : int
+    - mesesContratados : int
+    - proyectoAsignado : Proyecto
+    __
+    + toString() : String
+  }
+}
+
+' ═════════════════════════════════════════════════════════════
+' CAPA DE DOMINIO - PROYECTOS Y PERSONAL EXTERNO
+' ═════════════════════════════════════════════════════════════
+
+package "Capa de Dominio - Proyectos y Personal Externo" <<Rectangle>> {
+  
+  class TecnicoInvestigacion #FFCCBC {
+    - idTecnico : String
+    - cedula : String
+    - correoElectronico : String
+    - nombres : String
+    - apellidos : String
+    - telefono : String
+    - horasSemanales : int
+    - mesesContratados : int
+    - estado : String
+    - proyectoAsignado : Proyecto
+    __
+    + getNombresCompletos() : String
+    + esActivo() : boolean
+    + calcularCostoTotal() : double
+  }
+  
+  class Proyecto #E3F2FD {
+    - codigoProyecto : String
+    - nombreProyecto : String
+    - descripcion : String
+    - fechaInicio : Date
+    - fechaFin : Date
+    - estado : String
+    - tipoProyecto : TipoProyecto
+    - categoriaProyecto : CategoriaProyecto
+    - ayudantesPlanificados : int
+    - tecnicosPlanificados : int
+    - asistentesPlanificados : int
+    - director : Director
+    __
+    + agregarAyudante(ayudante: Ayudante) : boolean
+    + agregarAsistente(asistente: AsistenteInvestigacion) : boolean
+    + agregarTecnico(tecnico: TecnicoInvestigacion) : boolean
+    + tieneCupoDisponible() : boolean
+    + crearResumen(ayudantes: List) : Object[]
+  }
+  
+  enum TipoProyecto #F3E5F5 {
+    INTERNO
+    SEMILLA
+    GRUPAL
+    MULTIDISCIPLINARIO
+    VINCULACION
+  }
+  
+  enum CategoriaProyecto #F3E5F5 {
+    INVESTIGACION
+    VINCULACION
+    TRANSFERENCIA_TECNOLOGICA
+  }
+  
+  class Notificacion #E3F2FD {
+    - idNotificacion : String
+    - fecha : Date
+    - mensaje : String
+    - tipo : String
+    - leida : boolean
+    - proyectoRelacionado : Proyecto
+    __
+    + marcarComoLeida() : void
+    + esLeida() : boolean
+  }
+  
+  class Reporte #E3F2FD {
+    - idReporte : String
+    - titulo : String
+    - contenido : String
+    - estadisticas : Map<String,Object>
+    __
+    + exportarPDF() : File
+    + generarContenido() : String
+  }
+  
+  class ResultadoOperacion #F5F5F5 {
+    - exitoso : boolean
+    - mensaje : String
+    - errores : List<String>
+    __
+    + esExitoso() : boolean
+    + {static} exitoso(mensaje: String) : ResultadoOperacion
+    + {static} fallido(mensaje, error: String) : ResultadoOperacion
+  }
+}
+
+' ═════════════════════════════════════════════════════════════
+' CAPA DE SERVICIOS
+' ═════════════════════════════════════════════════════════════
+
+package "Capa de Servicios" <<Rectangle>> {
+  class ServicioDeEstadisticas #C8E6C9 {
+    __
+    + {static} calcularTodas(ayudantes: List) : Map
+    + {static} calcularPromedioIRA(ayudantes: List) : double
+    + {static} calcularCostoTotal(ayudantes: List) : double
+  }
+}
+
+' ═════════════════════════════════════════════════════════════
+' CAPA DE PERSISTENCIA (DAOs)
+' ═════════════════════════════════════════════════════════════
+
+package "Capa de Persistencia - DAOs" <<Rectangle>> {
+  
+  interface IDAO <<interface>> {
+    + guardar(objeto: T) : boolean
+    + buscarPorId(id: String) : T
+    + listarTodos() : List<T>
+    + actualizar(objeto: T) : boolean
+    + eliminar(id: String) : boolean
+  }
+  
+  class ConexionBD #FFF9C4 {
+    - {static} instancia : ConexionBD
+    - conexion : Connection
+    __
+    + {static} getInstancia() : ConexionBD
+    + getConexion() : Connection
+  }
+  
+  class MiembroEPNDAO #FFF9C4 {
+    - conexion : Connection
+    __
+    + guardar(objeto: MiembroEPN) : boolean
+    + buscarPorId(id: String) : MiembroEPN
+    + autenticar(correo, password) : MiembroEPN
+  }
+  
+  class EstudianteDAO #FFF9C4 {
+    - conexion : Connection
+    __
+    + buscarPorCriterio(criterio: String) : Estudiante
+    + buscarElegibles() : List<Estudiante>
+  }
+  
+  class AyudanteDAO #FFF9C4 {
+    - conexion : Connection
+    __
+    + buscarPorProyecto(codigoProyecto: String) : List<Ayudante>
+    + buscarActivos() : List<Ayudante>
+  }
+  
+  class AsistenteDAO #FFF9C4 {
+    - conexion : Connection
+    __
+    + buscarPorProyecto(codigoProyecto: String) : List<AsistenteInvestigacion>
+  }
+  
+  class TecnicoDAO #FFF9C4 {
+    - conexion : Connection
+    __
+    + buscarPorProyecto(codigoProyecto: String) : List<TecnicoInvestigacion>
+  }
+  
+  class ProyectoDAO #FFF9C4 {
+    - conexion : Connection
+    __
+    + buscarPorDirector(codigoUnico: String) : Proyecto
+    + listarActivos() : List<Proyecto>
+  }
+  
+  class NotificacionDAO #FFF9C4 {
+    - conexion : Connection
+    __
+    + buscarNoLeidas() : List<Notificacion>
+    + marcarComoLeida(idNotificacion: String) : boolean
+  }
+  
+  class InitBD #FFF9C4 {
+    + {static} inicializar() : void
+  }
+}
+
+' ═════════════════════════════════════════════════════════════
+' RELACIONES
+' ═════════════════════════════════════════════════════════════
+
+MiembroEPN <|-- Director
+MiembroEPN <|-- JefaDepartamento
+MiembroEPN <|-- Estudiante
+MiembroEPN <|-- Ayudante
+MiembroEPN <|-- AsistenteInvestigacion
+
+IDAO <|.. MiembroEPNDAO
+IDAO <|.. EstudianteDAO
+IDAO <|.. AyudanteDAO
+IDAO <|.. AsistenteDAO
+IDAO <|.. TecnicoDAO
+IDAO <|.. ProyectoDAO
+IDAO <|.. NotificacionDAO
+
+Director "1" o-right- "0..1" Proyecto : gestiona >
+Proyecto "1" o-down- "0..*" Ayudante : tiene >
+Proyecto "1" o-down- "0..*" AsistenteInvestigacion : tiene >
+Proyecto "1" o-right- "0..*" TecnicoInvestigacion : tiene >
+
+JefaDepartamento "1" *-down- "0..*" Notificacion : recibe >
+
+ControladorDirector .down.> ProyectoDAO : << usa >>
+ControladorDirector -down-> Director : controla
+ControladorJefaDepartamento -down-> JefaDepartamento : controla
+
+' ═════════════════════════════════════════════════════════════
+' NOTAS EXPLICATIVAS
+' ═════════════════════════════════════════════════════════════
+
+note top of MiembroEPN
+  Clase Base Abstracta
+  Define atributos comunes
+  Tabla: miembros_epn
+end note
+
+legend bottom right
+  <b>RESUMEN DEL SISTEMA</b>
+  
+  <b>Arquitectura:</b>
+  • Controladores: 3
+  • Entidades: 13 (inc. DTO)
+  • DAOs: 8 + 1 interfaz + InitBD
+  
+  <b>Tipos de Personal:</b>
+  1. Ayudante (hereda de MiembroEPN)
+  2. Asistente (hereda de MiembroEPN)
+  3. Técnico (Externo, no hereda de MiembroEPN)
+  
+  <b>Relación Proyecto:</b>
+  • Se utiliza Agregación (diamante vacío)
+  • El proyecto no es dueño de la existencia física de los miembros.
+end legend
+
+@enduml
