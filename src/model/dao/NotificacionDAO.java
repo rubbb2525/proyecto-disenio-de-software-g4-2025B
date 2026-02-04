@@ -180,7 +180,7 @@ public class NotificacionDAO implements IDAO<Notificacion> {
         String codigoProyecto = rs.getString("codigo_proyecto");
         if (codigoProyecto != null) {
             ProyectoDAO proyectoDAO = new ProyectoDAO();
-            ProyectoInvestigacion proyecto = proyectoDAO.buscarPorId(codigoProyecto);
+            Proyectos proyecto = proyectoDAO.buscarPorId(codigoProyecto);
             notificacion.setProyectoRelacionado(proyecto);
         }
         

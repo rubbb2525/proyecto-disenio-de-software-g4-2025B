@@ -10,16 +10,33 @@ import java.util.List;
  */
 public class EstudianteDAO implements IDAO<Estudiante> {
     private Connection conexion;
+    private MiembroEPNDAO miembroDAO;
+    private String lastError;
 
     public EstudianteDAO() {
         this.conexion = ConexionBD.getInstancia().getConexion();
+        this.miembroDAO = new MiembroEPNDAO();
+        this.lastError = "";
+    }
+
+    public String getLastError() {
+        return lastError;
     }
 
     @Override
     public boolean guardar(Estudiante estudiante) {
+        lastError = "";
+        // First, save to miembros_epn (password is already "N/A", rol "ESTUDIANTE", estado "ACTIVO")
+        if (!miembroDAO.guardar(estudiante)) {
+            lastError = "Error al guardar en miembros_epn";
+            return false;
+        }
+        
+        // Then save to estudiantes
         String sql = "INSERT INTO estudiantes (codigo_unico, cedula, correo_institucional, " +
                      "nombres, apellidos, telefono, carrera, ira, nivel) " +
                      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        
         
         try (PreparedStatement ps = conexion.prepareStatement(sql)) {
             ps.setString(1, estudiante.getCodigoUnico());
@@ -34,6 +51,7 @@ public class EstudianteDAO implements IDAO<Estudiante> {
             
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
+            lastError = e.getMessage();
             System.out.println("Error al guardar estudiante: " + e.getMessage());
             return false;
         }

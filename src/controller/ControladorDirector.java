@@ -2,12 +2,18 @@ package controller;
 
 import model.*;
 import model.dao.*;
+import model.service.ServicioDeEstadisticas;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Controlador para operaciones del Director
+ * 
+ * REFACTORIZACIÓN:
+ * - Usa métodos del modelo (Estudiante.convertirAAyudante/Asistente)
+ * - Obtiene proyecto via DAO en lugar de mantenerlo como atributo en Director
+ * - Usa Ayudante.obtenerActivos para filtrado
+ * - Usa ServicioDeEstadisticas para estadísticas agregadas
  */
 public class ControladorDirector {
     private Director directorActual;
@@ -16,15 +22,38 @@ public class ControladorDirector {
     private ProyectoDAO proyectoDAO;
     private NotificacionDAO notificacionDAO;
     private JefaDepartamento jefaDepartamento;
+    private TecnicoDAO tecnicoDAO;
+    private AsistenteDAO asistenteDAO;
 
-    public ControladorDirector(Director director, AyudanteDAO ayudanteDAO, 
-                              EstudianteDAO estudianteDAO, ProyectoDAO proyectoDAO) {
+    // ÚNICO SERVICIO: Estadísticas agregadas
+    private ServicioDeEstadisticas servicioEstadisticas;
+
+    public ControladorDirector(
+        Director director,
+        AyudanteDAO ayudanteDAO,
+        AsistenteDAO asistenteDAO,
+        TecnicoDAO tecnicoDAO,
+        EstudianteDAO estudianteDAO,
+        ProyectoDAO proyectoDAO
+) {
         this.directorActual = director;
         this.ayudanteDAO = ayudanteDAO;
+        this.asistenteDAO = asistenteDAO;
+        this.tecnicoDAO = tecnicoDAO;
         this.estudianteDAO = estudianteDAO;
         this.proyectoDAO = proyectoDAO;
+
         this.notificacionDAO = new NotificacionDAO();
         this.jefaDepartamento = JefaDepartamento.getInstancia();
+    }
+
+    /**
+     * NUEVO: Obtiene el proyecto del director (Lazy Loading)
+     * Antes: director.getProyectoAsignado() (podía ser null)
+     * Ahora: Se obtiene cuando se necesita via DAO
+     */
+    public Proyectos obtenerProyectoDelDirector() {
+        return proyectoDAO.buscarPorDirector(directorActual.getCodigoUnico());
     }
 
     /**
@@ -39,127 +68,166 @@ public class ControladorDirector {
 
     /**
      * Registra un nuevo ayudante
+     * 
+     * REFACTORIZACIÓN:
+     * - Usa validaciones del modelo (Estudiante, Proyectos)
+     * - Usa Estudiante.convertirAAyudante() para la conversión
      */
-    public ResultadoOperacion registrarAyudante(String codigoEstudiante, int horas, double salario) {
-        ResultadoOperacion resultado = new ResultadoOperacion();
-
-        // Validar horas
-        if (horas > 32) {
-            resultado.setMensaje("Las horas semanales no pueden exceder 32");
-            resultado.agregarError("Horas semanales inválidas");
-            return resultado;
-        }
+    public ResultadoOperacion registrarAyudante(String codigoEstudiante, int horas, int meses) {
+        // Obtener proyecto del director
+        Proyectos proyecto = obtenerProyectoDelDirector();
 
         // Buscar estudiante
         Estudiante estudiante = buscarEstudiante(codigoEstudiante);
-        if (estudiante == null) {
-            resultado.setMensaje("Estudiante no encontrado");
-            resultado.agregarError("Código de estudiante inválido");
-            return resultado;
+
+        // Validar registro usando el modelo Director
+        ResultadoOperacion validacion = directorActual.validarRegistroAyudante(proyecto, estudiante, horas, meses);
+        if (!validacion.esExitoso()) {
+            return validacion;
         }
 
-        // Validar elegibilidad
-        if (!estudiante.esElegibleParaAyudantia()) {
-            resultado.setMensaje("Estudiante no cumple requisitos (IRA mín. 24, Nivel mín. 3)");
-            resultado.agregarError("Criterios no cumplidos");
-            return resultado;
-        }
-
-        // Convertir a ayudante
-        Ayudante ayudante = estudiante.convertirAAyudante(
-            directorActual.getProyectoAsignado(), 
-            horas, 
-            salario
-        );
+        // Convertir usando el método del modelo
+        Ayudante ayudante = estudiante.convertirAAyudante(proyecto, horas, meses);
 
         if (ayudante == null) {
-            resultado.setMensaje("No se pudo convertir a ayudante");
-            resultado.agregarError("Error en la conversión");
-            return resultado;
+            return ResultadoOperacion.fallido("No se pudo convertir a ayudante", "Error en la conversión");
         }
 
         // Guardar en BD
         if (!ayudanteDAO.guardar(ayudante)) {
-            resultado.setMensaje("Error al guardar en BD");
-            resultado.agregarError("Error de persistencia");
-            return resultado;
+            return ResultadoOperacion.errorPersistencia("guardar ayudante");
         }
 
         // Notificar a jefa
-        Notificacion notif = new Notificacion(
-            "NOT_" + System.currentTimeMillis(),
-            "Nuevo ayudante registrado: " + ayudante.getNombresCompletos() + 
-            " en proyecto " + directorActual.getProyectoAsignado().getNombreProyecto(),
-            "REGISTRO_AYUDANTE"
-        );
-        notif.setAyudanteRelacionado(ayudante);
-        notif.setProyectoRelacionado(directorActual.getProyectoAsignado());
-        
-        // Guardar en BD
+        Notificacion notif = Notificacion.crearRegistroAyudante(ayudante, proyecto);
         notificacionDAO.guardar(notif);
-        
-        // Enviar a Jefa en memoria
         jefaDepartamento.recibirNotificacion(notif);
 
-        resultado.setExitoso(true);
-        resultado.setMensaje("Ayudante registrado exitosamente");
-
-        return resultado;
+        return ResultadoOperacion.exitoso("Ayudante registrado exitosamente");
     }
 
     /**
      * Da de baja un ayudante
      */
     public ResultadoOperacion darDeBajaAyudante(String codigoAyudante, String motivo, Date fecha) {
-        ResultadoOperacion resultado = new ResultadoOperacion();
-
         // Buscar ayudante
         Ayudante ayudante = ayudanteDAO.buscarPorId(codigoAyudante);
         if (ayudante == null) {
-            resultado.setMensaje("Ayudante no encontrado");
-            resultado.agregarError("Código de ayudante inválido");
-            return resultado;
+            return ResultadoOperacion.noEncontrado("Ayudante", "Código de ayudante");
         }
 
-        // Dar de baja
-        ayudante.darDeBaja(motivo, fecha);
+        // Dar de baja (ahora con validación en el modelo)
+        ResultadoOperacion resultado = ayudante.darDeBaja(motivo, fecha);
+        if (!resultado.esExitoso()) {
+            return resultado;
+        }
 
         // Actualizar en BD
         if (!ayudanteDAO.actualizar(ayudante)) {
-            resultado.setMensaje("Error al actualizar en BD");
-            resultado.agregarError("Error de persistencia");
-            return resultado;
+            return ResultadoOperacion.errorPersistencia("actualizar ayudante");
         }
 
         // Notificar a jefa
-        Notificacion notif = new Notificacion(
-            "NOT_" + System.currentTimeMillis(),
-            "Ayudante dado de baja: " + ayudante.getNombresCompletos() + 
-            " - Motivo: " + motivo,
-            "BAJA_AYUDANTE"
-        );
-        notif.setAyudanteRelacionado(ayudante);
-        
-        // Guardar en BD
+        Notificacion notif = Notificacion.crearBajaAyudante(ayudante, motivo);
         notificacionDAO.guardar(notif);
-        
-        // Enviar a Jefa en memoria
         jefaDepartamento.recibirNotificacion(notif);
 
-        resultado.setExitoso(true);
-        resultado.setMensaje("Ayudante dado de baja exitosamente");
+        return ResultadoOperacion.exitoso("Ayudante dado de baja exitosamente");
+    }
 
+    public ResultadoOperacion registrarAsistente(
+        String codigoEstudiante,
+        int horas,
+        int meses
+) {
+    Proyectos proyecto = obtenerProyectoDelDirector();
+
+    Estudiante estudiante = buscarEstudiante(codigoEstudiante);
+
+        // Validar registro usando el modelo Director
+        ResultadoOperacion validacion = directorActual.validarRegistroAsistente(proyecto, estudiante, horas, meses);
+    if (!validacion.esExitoso()) {
+        return validacion;
+    }
+
+    // Convertir usando el método del modelo
+    AsistenteInvestigacion asistente = estudiante.convertirAAsistente(
+        proyecto, horas, meses
+    );
+
+    if (!asistenteDAO.guardar(asistente)) {
+        return ResultadoOperacion.errorPersistencia("guardar asistente");
+    }
+
+    Notificacion notif = Notificacion.crearRegistroAsistente(asistente, proyecto);
+    notificacionDAO.guardar(notif);
+    jefaDepartamento.recibirNotificacion(notif);
+
+    return ResultadoOperacion.exitoso("Asistente registrado exitosamente");
+}
+
+public ResultadoOperacion registrarTecnico(TecnicoInvestigacion tecnico) {
+    Proyectos proyecto = obtenerProyectoDelDirector();
+    ResultadoOperacion resultado = directorActual.prepararTecnico(tecnico, proyecto);
+    if (!resultado.esExitoso()) {
         return resultado;
     }
 
+    if (!tecnicoDAO.guardar(tecnico)) {
+        resultado.setMensaje("Error al guardar técnico en BD");
+        return resultado;
+    }
+
+    Notificacion notif = Notificacion.crearRegistroTecnico(tecnico, proyecto);
+
+    notificacionDAO.guardar(notif);
+    jefaDepartamento.recibirNotificacion(notif);
+
+    resultado.setExitoso(true);
+    resultado.setMensaje("Técnico registrado exitosamente");
+
+    return resultado;
+}
+
+
     /**
      * Consulta los ayudantes del proyecto
+     * 
+     * REFACTORIZACIÓN:
+     * - Obtiene proyecto via método (no como atributo)
      */
     public List<Ayudante> consultarAyudantesDelProyecto() {
-        if (directorActual.getProyectoAsignado() == null) {
+        Proyectos proyecto = obtenerProyectoDelDirector();
+        if (proyecto == null) {
             return null;
         }
-        return ayudanteDAO.buscarPorProyecto(directorActual.getProyectoAsignado().getCodigoProyecto());
+        return ayudanteDAO.buscarPorProyecto(proyecto.getCodigoProyecto());
+    }
+
+    /**
+     * NUEVO: Obtiene ayudantes activos del proyecto
+     * Usa Ayudante.obtenerActivos para filtrado
+     */
+    public List<Ayudante> obtenerAyudantesActivos() {
+        List<Ayudante> ayudantes = consultarAyudantesDelProyecto();
+        if (ayudantes == null) {
+            return null;
+        }
+        // Usar método estático del modelo
+        return Ayudante.obtenerActivos(ayudantes);
+    }
+
+    /**
+     * NUEVO: Obtiene estadísticas del proyecto
+     * Usa ServicioDeEstadisticas
+     */
+    public java.util.Map<String, Object> obtenerEstadisticasProyecto() {
+        List<Ayudante> ayudantes = consultarAyudantesDelProyecto();
+        if (ayudantes == null || ayudantes.isEmpty()) {
+            return new java.util.HashMap<>();
+        }
+        // Usar servicio de estadísticas
+        return ServicioDeEstadisticas.calcularTodas(ayudantes);
     }
 
     /**
@@ -170,9 +238,140 @@ public class ControladorDirector {
     }
 
     /**
-     * Obtiene el proyecto del director
+     * Obtiene el proyecto del director (usando lazy loading)
      */
-    public ProyectoInvestigacion getProyecto() {
-        return directorActual.getProyectoAsignado();
+    public Proyectos getProyecto() {
+        return obtenerProyectoDelDirector();
+    }
+
+    /**
+     * NUEVO: Obtiene información del proyecto (nombre, descripción, etc)
+     */
+    public String obtenerNombreProyecto() {
+        Proyectos proyecto = obtenerProyectoDelDirector();
+        return directorActual.obtenerNombreProyecto(proyecto);
+    }
+
+    /**
+     * NUEVO: Obtiene cupos disponibles en el proyecto
+     */
+    public int obtenerCuposDisponibles() {
+        Proyectos proyecto = obtenerProyectoDelDirector();
+        return directorActual.obtenerCuposDisponibles(proyecto);
+    }
+
+    /**
+     * NUEVO: Verifica si hay cupo disponible
+     */
+    public boolean hayCapoDisponible() {
+        Proyectos proyecto = obtenerProyectoDelDirector();
+        return directorActual.hayCupoDisponible(proyecto);
+    }
+
+    /**
+     * NUEVO: Crea un nuevo proyecto de investigación
+     * 
+     * RESPONSABILIDAD ÚNICA:
+     * - Valida los datos del proyecto
+     * - Verifica que el director no tenga proyecto activo
+     * - Crea el proyecto y lo persiste en BD
+     * - Notifica a la jefa de departamento
+     * 
+     * @param codigoProyecto Código único del proyecto
+     * @param nombreProyecto Nombre del proyecto
+     * @param descripcion Descripción del proyecto
+     * @param fechaInicio Fecha de inicio
+     * @param fechaFin Fecha de finalización
+     * @param tipoProyecto Tipo de proyecto (INTERNO, SEMILLA, etc.)
+     * @param ayudantesPlanificados Número de ayudantes planificados
+     * @param tecnicosPlanificados Número de técnicos planificados
+     * @param asistentesPlanificados Número de asistentes planificados
+     * @return ResultadoOperacion con el resultado de la operación
+     */
+    public ResultadoOperacion crearProyecto(String codigoProyecto, String nombreProyecto, 
+                                           String descripcion, Date fechaInicio, Date fechaFin,
+                                           TipoProyecto tipoProyecto, int ayudantesPlanificados,
+                                           int tecnicosPlanificados, int asistentesPlanificados) {
+        // Validar que el director pueda crear proyecto
+        Proyectos proyectoExistente = obtenerProyectoDelDirector();
+        ResultadoOperacion validacionDirector = directorActual.validarCreacionProyecto(proyectoExistente);
+        if (!validacionDirector.esExitoso()) {
+            return validacionDirector;
+        }
+
+        // Validar que el código no esté duplicado
+        Proyectos proyectoDuplicado = proyectoDAO.buscarPorCodigo(codigoProyecto);
+        if (proyectoDuplicado != null) {
+            return ResultadoOperacion.fallido(
+                "El código de proyecto ya existe",
+                "Código duplicado: " + codigoProyecto
+            );
+        }
+
+        // Validar datos del proyecto usando el modelo
+        ResultadoOperacion validacionProyecto = Proyectos.validarCreacion(
+            codigoProyecto, nombreProyecto, fechaInicio, fechaFin,
+            tipoProyecto, ayudantesPlanificados
+        );
+        if (!validacionProyecto.esExitoso()) {
+            return validacionProyecto;
+        }
+
+        // Crear el proyecto desde el modelo Director
+        Proyectos nuevoProyecto = directorActual.crearProyecto(
+            codigoProyecto,
+            nombreProyecto,
+            descripcion,
+            fechaInicio,
+            fechaFin,
+            tipoProyecto,
+            ayudantesPlanificados,
+            tecnicosPlanificados,
+            asistentesPlanificados
+        );
+
+        // Guardar en BD
+        if (!proyectoDAO.guardar(nuevoProyecto)) {
+            return ResultadoOperacion.errorPersistencia("guardar el proyecto");
+        }
+
+        // Notificar a la jefa de departamento
+        Notificacion notif = Notificacion.crearNuevoProyecto(nuevoProyecto, directorActual);
+        notificacionDAO.guardar(notif);
+        jefaDepartamento.recibirNotificacion(notif);
+
+        return ResultadoOperacion.exitoso("Proyecto creado exitosamente");
+    }
+
+    /**
+     * NUEVO: Obtiene asistentes del proyecto
+     */
+    public List<AsistenteInvestigacion> obtenerAsistentesProyecto() {
+        Proyectos proyecto = obtenerProyectoDelDirector();
+        if (proyecto == null) {
+            return new java.util.ArrayList<>();
+        }
+        return asistenteDAO.buscarPorProyecto(proyecto.getCodigoProyecto());
+    }
+
+    /**
+     * NUEVO: Obtiene técnicos del proyecto
+     */
+    public List<TecnicoInvestigacion> obtenerTecnicosProyecto() {
+        Proyectos proyecto = obtenerProyectoDelDirector();
+        if (proyecto == null) {
+            return new java.util.ArrayList<>();
+        }
+        return tecnicoDAO.buscarPorProyecto(proyecto.getCodigoProyecto());
+    }
+
+    /**
+     * NUEVO: Verifica si el director puede crear un proyecto
+     * 
+     * @return true si el director no tiene proyecto activo, false en caso contrario
+     */
+    public boolean puedeCrearProyecto() {
+        Proyectos proyectoExistente = obtenerProyectoDelDirector();
+        return Proyectos.puedeCrearNuevoProyecto(proyectoExistente);
     }
 }

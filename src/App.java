@@ -5,22 +5,26 @@ import view.*;
 
 /**
  * Clase principal de la aplicación
+ * 
+ * REFACTORIZACIÓN:
+ * - No llama a director.setProyectoAsignado() (Director ya no mantiene proyecto)
+ * - El proyecto se obtiene via DAO cuando sea necesario (Lazy Loading)
+ * - Importa servicios para que estén disponibles
  */
 public class App {
     private static MiembroEPNDAO miembroDAO;
     private static AyudanteDAO ayudanteDAO;
     private static EstudianteDAO estudianteDAO;
     private static ProyectoDAO proyectoDAO;
+    private static TecnicoDAO tecnicoDAO;
+    private static AsistenteDAO asistenteDAO;
+
     private static ControladorAutenticacion controladorAuth;
     private static VistaLogin vistaLogin;
     private static VistaDirector vistaDirector;
     private static VistaJefaDepartamento vistaJefa;
 
     public static void main(String[] args) throws Exception {
-        System.out.println("\n╔════════════════════════════════════════════════════════╗");
-        System.out.println("║   Sistema Gestión Ayudantes - FIS-EPN                 ║");
-        System.out.println("║   Versión 1.0 | SQLite                               ║");
-        System.out.println("╚════════════════════════════════════════════════════════╝\n");
         
         // Inicializar conexión a BD SQLite
         System.out.println("→ Conectando a BD SQLite...");
@@ -36,6 +40,9 @@ public class App {
         
         // Inicializar DAOs
         inicializarDAOs();
+        
+        // Analizar esquema de BD
+        analizarEsquemaBD();
         
         // Inicializar controlador de autenticación
         controladorAuth = new ControladorAutenticacion(miembroDAO, estudianteDAO, ayudanteDAO);
@@ -53,9 +60,57 @@ public class App {
         ayudanteDAO = new AyudanteDAO();
         estudianteDAO = new EstudianteDAO();
         proyectoDAO = new ProyectoDAO();
-        
-        System.out.println("DAOs inicializados correctamente");
+        tecnicoDAO = new TecnicoDAO();
+        asistenteDAO = new AsistenteDAO();
+
+        System.out.println("✓ DAOs inicializados correctamente");
     }
+
+    private static void analizarEsquemaBD() {
+        System.out.println("\n=== ANÁLISIS DEL ESQUEMA DE LA BASE DE DATOS ===\n");
+        
+        try {
+            java.sql.Connection conn = ConexionBD.getInstancia().getConexion();
+            java.sql.DatabaseMetaData meta = conn.getMetaData();
+            
+            // Obtener todas las tablas
+            java.sql.ResultSet rs = meta.getTables(null, null, "%", new String[]{"TABLE"});
+            while (rs.next()) {
+                String tableName = rs.getString("TABLE_NAME");
+                System.out.println("Tabla: " + tableName);
+                
+                // Obtener columnas de la tabla
+                java.sql.ResultSet rsColumns = meta.getColumns(null, null, tableName, "%");
+                while (rsColumns.next()) {
+                    String columnName = rsColumns.getString("COLUMN_NAME");
+                    String columnType = rsColumns.getString("TYPE_NAME");
+                    int columnSize = rsColumns.getInt("COLUMN_SIZE");
+                    boolean isNullable = rsColumns.getInt("NULLABLE") == 1;
+                    System.out.println("  - " + columnName + " (" + columnType + "(" + columnSize + ")" + (isNullable ? "" : " NOT NULL") + ")");
+                }
+                rsColumns.close();
+                
+                // Obtener foreign keys
+                java.sql.ResultSet rsFK = meta.getImportedKeys(null, null, tableName);
+                while (rsFK.next()) {
+                    String fkColumn = rsFK.getString("FKCOLUMN_NAME");
+                    String pkTable = rsFK.getString("PKTABLE_NAME");
+                    String pkColumn = rsFK.getString("PKCOLUMN_NAME");
+                    System.out.println("  FK: " + fkColumn + " -> " + pkTable + "." + pkColumn);
+                }
+                rsFK.close();
+                
+                System.out.println();
+            }
+            rs.close();
+            
+        } catch (Exception e) {
+            System.out.println("Error al analizar esquema: " + e.getMessage());
+        }
+        
+        System.out.println("=== FIN ANÁLISIS ===\n");
+    }
+
 
     public static void navegarSegunRol(String rol) {
         vistaLogin.cerrar();
@@ -68,10 +123,15 @@ public class App {
                 abrirVistaJefaDepartamento();
                 break;
             default:
-                System.out.println("Rol no reconocido");
+                System.out.println("✗ Rol no reconocido: " + rol);
         }
     }
 
+    /**
+     * REFACTORIZACIÓN:
+     * - NO llama a director.setProyectoAsignado()
+     * - El proyecto se obtiene via DAO cuando sea necesario en ControladorDirector
+     */
     private static void abrirVistaDirector() {
         MiembroEPN usuario = controladorAuth.getUsuarioActual();
         if (usuario == null) {
@@ -79,6 +139,7 @@ public class App {
             return;
         }
 
+        // Crear objeto Director con datos básicos
         Director director = new Director(
             usuario.getCodigoUnico(),
             usuario.getCedula(),
@@ -89,19 +150,38 @@ public class App {
             usuario.getTelefono()
         );
 
-        ProyectoInvestigacion proyecto = proyectoDAO.buscarPorDirector(director.getCodigoUnico());
-        director.setProyectoAsignado(proyecto);
+        // CAMBIO: NO asignar proyecto aquí
+        // El proyecto se obtendrá via DAO en ControladorDirector.obtenerProyectoDelDirector()
+        // cuando sea necesario (Lazy Loading)
+        
+        // Proyectos proyecto = proyectoDAO.buscarPorDirector(director.getCodigoUnico());
+        // director.setProyectoAsignado(proyecto);  ← ELIMINADO
 
-        ControladorDirector ctrlDirector = new ControladorDirector(director, ayudanteDAO, estudianteDAO, proyectoDAO);
+        // Crear controlador del director
+        ControladorDirector ctrlDirector = new ControladorDirector(
+        director,
+        ayudanteDAO,
+        asistenteDAO,
+        tecnicoDAO,
+        estudianteDAO,
+        proyectoDAO
+    );
+
+    
+        // Mostrar vista
         vistaDirector = new VistaDirector(ctrlDirector);
         vistaDirector.setVisible(true);
     }
 
+    /**
+     * Abre vista de Jefa de Departamento
+     */
     private static void abrirVistaJefaDepartamento() {
         MiembroEPN usuario = controladorAuth.getUsuarioActual();
         JefaDepartamento jefa = JefaDepartamento.getInstancia();
 
         if (usuario != null) {
+            // Actualizar datos de la jefa singleton
             jefa.setCodigoUnico(usuario.getCodigoUnico());
             jefa.setCedula(usuario.getCedula());
             jefa.setCorreoInstitucional(usuario.getCorreoInstitucional());
@@ -112,9 +192,15 @@ public class App {
             jefa.setEstado(usuario.getEstado());
         }
 
-        ControladorJefaDepartamento ctrlJefa = new ControladorJefaDepartamento(jefa, ayudanteDAO, proyectoDAO);
+        // Crear controlador de jefa
+        ControladorJefaDepartamento ctrlJefa = new ControladorJefaDepartamento(
+            jefa, 
+            ayudanteDAO, 
+            proyectoDAO
+        );
+        
+        // Mostrar vista
         vistaJefa = new VistaJefaDepartamento(ctrlJefa);
-        vistaJefa.refrescar(); // Inicializar contador de notificaciones
         vistaJefa.setVisible(true);
     }
 }

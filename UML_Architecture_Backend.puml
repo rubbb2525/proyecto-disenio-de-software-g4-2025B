@@ -1,0 +1,502 @@
+@startuml UML_Backend_Architecture
+!define LIGHTBLUE #E3F2FD
+!define LIGHTGREEN #E8F5E9
+!define LIGHTYELLOW #FFF9C4
+!define LIGHTRED #FFEBEE
+
+skinparam classAttributeIconSize 0
+skinparam classFontSize 11
+skinparam packageFontSize 12
+
+title Diagrama UML - Arquitectura Backend\nSistema de Gestión de Ayudantes de Investigación
+
+package "model" {
+    
+    ' ============ ENUMERACIONES ============
+    
+    enum CategoriaProyecto {
+        INVESTIGACION
+        VINCULACION
+        TRANSFERENCIA_TECNOLOGICA
+        --
+        -descripcion: String
+    }
+    
+    enum TipoProyecto {
+        INTERNO
+        SEMILLA
+        GRUPAL
+        MULTIDISCIPLINARIO
+        VINCULACION_CON_FINANCIAMIENTO
+        TRANSFERENCIA_TECNOLOGICA
+        --
+        -descripcion: String
+        -categoria: CategoriaProyecto
+    }
+    
+    ' ============ CLASE BASE ABSTRACTA ============
+    
+    abstract class MiembroEPN {
+        -codigoUnico: String
+        -cedula: String
+        -correoInstitucional: String
+        -password: String
+        -nombres: String
+        -apellidos: String
+        -telefono: String
+        -rol: String
+        -estado: String
+        --
+        +getNombresCompletos(): String
+        +autenticar(passwordIngresada: String): boolean
+        +esActivo(): boolean
+        +obtenerResumen(): String
+        {static} +esCorreoValido(correo: String): boolean
+    }
+    
+    ' ============ CLASES DE DOMINIO - MIEMBROS ============
+    
+    class Director {
+        --
+        +puedeDirigirProyecto(): boolean
+        +validarCreacionProyecto(proyectoExistente: Proyectos): ResultadoOperacion
+        +validarRegistroAyudante(proyecto: Proyectos, estudiante: Estudiante, horas: int, meses: int): ResultadoOperacion
+        +validarRegistroAsistente(proyecto: Proyectos, estudiante: Estudiante, horas: int, meses: int): ResultadoOperacion
+        +prepararTecnico(tecnico: TecnicoInvestigacion, proyecto: Proyectos): ResultadoOperacion
+        +crearProyecto(...): Proyectos
+        +esProyectoPropio(proyecto: Proyectos): boolean
+        +obtenerNombreProyecto(proyecto: Proyectos): String
+        +obtenerCuposDisponibles(proyecto: Proyectos): int
+        +hayCupoDisponible(proyecto: Proyectos): boolean
+    }
+    
+    class Estudiante {
+        -carrera: String
+        -ira: float
+        -nivel: int
+        --
+        +esElegibleParaAyudantia(): boolean
+        +validarConversionAyudante(horas: int, meses: int): ResultadoOperacion
+        +validarConversionAsistente(horas: int, meses: int): ResultadoOperacion
+        +esValido(): boolean
+        +convertirAAyudante(proyecto: Proyectos, horas: int, meses: int): Ayudante
+        +convertirAAsistente(proyecto: Proyectos, horas: int, meses: int): AsistenteInvestigacion
+    }
+    
+    class Ayudante {
+        -carrera: String
+        -nivel: int
+        -ira: float
+        -fechaRegistro: Date
+        -fechaFinalizacion: Date
+        -motivoSalida: String
+        -proyectoAsignado: Proyectos
+        -horasSemanales: int
+        -mesesContratados: int
+        --
+        +esActivo(): boolean
+        +darDeBaja(motivo: String, fecha: Date): ResultadoOperacion
+        {static} +filtrar(ayudantes: List<Ayudante>, filtros: Map): List<Ayudante>
+        {static} +obtenerActivos(ayudantes: List<Ayudante>): List<Ayudante>
+        {static} +obtenerInactivos(ayudantes: List<Ayudante>): List<Ayudante>
+        {static} +porCarrera(ayudantes: List<Ayudante>, carrera: String): List<Ayudante>
+        {static} +porNivel(ayudantes: List<Ayudante>, nivel: int): List<Ayudante>
+        {static} +porProyecto(ayudantes: List<Ayudante>, codigoProyecto: String): List<Ayudante>
+    }
+    
+    class AsistenteInvestigacion {
+        --
+        <<hereda todo de Ayudante>>
+    }
+    
+    class JefaDepartamento <<Singleton>> {
+        {static} -instancia: JefaDepartamento
+        -notificaciones: List<Notificacion>
+        --
+        {static} +getInstancia(): JefaDepartamento
+        +recibirNotificacion(notificacion: Notificacion): void
+        +cargarNotificacionesDesdeBD(notificacionesBD: List<Notificacion>): void
+        +getNotificaciones(): List<Notificacion>
+        +getNotificacionesNoLeidas(): List<Notificacion>
+        +contarNotificacionesNoLeidas(): int
+        +marcarTodasComoLeidas(): void
+        +marcarComoLeida(notificacion: Notificacion): void
+        +filtrarAyudantes(ayudantes: List<Ayudante>, filtros: Map): List<Ayudante>
+        +obtenerAyudantesActivos(ayudantes: List<Ayudante>): List<Ayudante>
+        +obtenerAyudantesInactivos(ayudantes: List<Ayudante>): List<Ayudante>
+        +obtenerAyudantesPorCarrera(ayudantes: List<Ayudante>, carrera: String): List<Ayudante>
+        +obtenerAyudantesPorNivel(ayudantes: List<Ayudante>, nivel: int): List<Ayudante>
+        +obtenerEstadisticasGenerales(ayudantes: List<Ayudante>): Map<String, Object>
+        +obtenerEstadisticasPorCarrera(ayudantes: List<Ayudante>): Map<String, Map>
+        +obtenerEstadisticasPorNivel(ayudantes: List<Ayudante>): Map<Integer, Map>
+        +obtenerResumenProyectos(proyectos: List<Proyectos>, ayudantesPorProyecto: Map): List<Object[]>
+        +generarReporteGeneral(proyectos: List<Proyectos>, ayudantes: List<Ayudante>): Reporte
+        +generarReportePorProyecto(proyecto: Proyectos): Reporte
+        +generarReportePorCarrera(carrera: String, ayudantes: List<Ayudante>): Reporte
+        +generarReportePorNivel(nivel: int, ayudantes: List<Ayudante>): Reporte
+    }
+    
+    class TecnicoInvestigacion {
+        -idTecnico: String
+        -cedula: String
+        -correoElectronico: String
+        -nombres: String
+        -apellidos: String
+        -telefono: String
+        -horasSemanales: int
+        -mesesContratados: int
+        -estado: String
+        -fechaRegistro: Date
+        -fechaFinalizacion: Date
+        -motivoSalida: String
+        -proyectoAsignado: Proyectos
+        --
+        +esActivo(): boolean
+        +darDeBaja(motivo: String, fecha: Date): ResultadoOperacion
+        +obtenerNombreCompleto(): String
+    }
+    
+    ' ============ CLASE PROYECTOS ============
+    
+    class Proyectos {
+        -codigoProyecto: String
+        -nombreProyecto: String
+        -descripcion: String
+        -fechaInicio: Date
+        -fechaFin: Date
+        -estado: String
+        -tipoProyecto: TipoProyecto
+        -ayudantesPlanificados: int
+        -tecnicosPlanificados: int
+        -asistentesPlanificados: int
+        -director: Director
+        --
+        +getAyudantesActivos(): int
+        +tieneEstadoActivo(): boolean
+        {static} +filtrarActivos(proyectos: List<Proyectos>): List<Proyectos>
+        +tieneCupoDisponible(): boolean
+        +getCuposDisponibles(): int
+        +crearResumen(ayudantesProyecto: List<Ayudante>): Object[]
+        {static} +validarCreacion(...): ResultadoOperacion
+    }
+    
+    ' ============ CLASES DE SOPORTE ============
+    
+    class Notificacion {
+        -idNotificacion: String
+        -fecha: Date
+        -mensaje: String
+        -tipo: String
+        -leida: boolean
+        -proyectoRelacionado: Proyectos
+        -ayudanteRelacionado: Ayudante
+        --
+        +marcarComoLeida(): void
+        +marcarComoNoLeida(): void
+        {static} +crearRegistroAyudante(ayudante: Ayudante, proyecto: Proyectos): Notificacion
+        {static} +crearBajaAyudante(ayudante: Ayudante, motivo: String): Notificacion
+        {static} +crearRegistroAsistente(asistente: AsistenteInvestigacion, proyecto: Proyectos): Notificacion
+        {static} +crearRegistroTecnico(tecnico: TecnicoInvestigacion, proyecto: Proyectos): Notificacion
+    }
+    
+    class ResultadoOperacion {
+        -exitoso: boolean
+        -mensaje: String
+        -errores: List<String>
+        --
+        +esExitoso(): boolean
+        +tieneErrores(): boolean
+        +agregarError(error: String): void
+        +getMensajeCompleto(): String
+        {static} +exitoso(mensaje: String): ResultadoOperacion
+        {static} +fallido(mensaje: String, errores: String...): ResultadoOperacion
+        {static} +noEncontrado(entidad: String, identificador: String): ResultadoOperacion
+    }
+    
+    class Reporte {
+        -idReporte: String
+        -fechaGeneracion: Date
+        -tipo: String
+        -titulo: String
+        -contenido: String
+        -estadisticas: Map<String, Object>
+        --
+        +exportarPDF(rutaArchivo: String): File
+    }
+}
+
+package "model.dao" <<Database>> {
+    
+    interface IDAO<T> {
+        +guardar(objeto: T): boolean
+        +buscarPorId(id: String): T
+        +listarTodos(): List<T>
+        +actualizar(objeto: T): boolean
+        +eliminar(id: String): boolean
+    }
+    
+    class ConexionBD <<Singleton>> {
+        {static} -instancia: ConexionBD
+        -URL_BD: String
+        --
+        {static} +getInstancia(): ConexionBD
+        +getConexion(): Connection
+    }
+    
+    class MiembroEPNDAO {
+        +autenticar(correo: String, password: String): MiembroEPN
+        +buscarPorCorreo(correo: String): MiembroEPN
+    }
+    
+    class EstudianteDAO {
+        +buscarPorCorreo(correo: String): Estudiante
+        +buscarPorCodigo(codigo: String): Estudiante
+    }
+    
+    class AyudanteDAO {
+        +buscarPorProyecto(codigoProyecto: String): List<Ayudante>
+        +buscarPorCarrera(carrera: String): List<Ayudante>
+        +buscarPorEstado(estado: String): List<Ayudante>
+    }
+    
+    class AsistenteDAO {
+        +buscarPorProyecto(codigoProyecto: String): List<AsistenteInvestigacion>
+    }
+    
+    class TecnicoDAO {
+        +buscarPorProyecto(codigoProyecto: String): List<TecnicoInvestigacion>
+    }
+    
+    class ProyectoDAO {
+        +buscarPorCodigo(codigo: String): Proyectos
+        +buscarPorDirector(codigoDirector: String): Proyectos
+        +buscarPorEstado(estado: String): List<Proyectos>
+    }
+    
+    class NotificacionDAO {
+        +marcarComoLeida(idNotificacion: String): boolean
+        +listarNoLeidas(): List<Notificacion>
+        +listarTodas(): List<Notificacion>
+    }
+    
+    class InitBD {
+        {static} +inicializarBaseDatos(): void
+    }
+}
+
+package "model.service" <<Service>> {
+    
+    class ServicioDeEstadisticas <<utility>> {
+        {static} +calcularTodas(ayudantes: List<Ayudante>): Map<String, Object>
+        {static} +calcularPromedioIRA(ayudantes: List<Ayudante>): double
+        {static} +calcularPromedioHoras(ayudantes: List<Ayudante>): double
+        {static} +calcularMesesPromedio(ayudantes: List<Ayudante>): double
+        {static} +contarActivos(ayudantes: List<Ayudante>): long
+        {static} +contarInactivos(ayudantes: List<Ayudante>): long
+        {static} +agruparPorCarrera(ayudantes: List<Ayudante>): Map<String, List<Ayudante>>
+        {static} +agruparPorNivel(ayudantes: List<Ayudante>): Map<Integer, List<Ayudante>>
+        {static} +calcularPorCarrera(ayudantes: List<Ayudante>): Map<String, Map<String, Object>>
+        {static} +calcularPorNivel(ayudantes: List<Ayudante>): Map<Integer, Map<String, Object>>
+    }
+    
+    class ServicioDeReportes <<utility>> {
+        {static} +generarReporteGeneral(proyectos: List<Proyectos>, ayudantes: List<Ayudante>): Reporte
+        {static} +generarReportePorProyecto(proyecto: Proyectos): Reporte
+        {static} +generarReportePorCarrera(carrera: String, ayudantes: List<Ayudante>): Reporte
+        {static} +generarReportePorNivel(nivel: int, ayudantes: List<Ayudante>): Reporte
+    }
+}
+
+package "controller" {
+    
+    class ControladorAutenticacion {
+        -miembroEPNDAO: MiembroEPNDAO
+        --
+        +autenticar(correo: String, password: String): ResultadoOperacion
+        +obtenerTipoMiembro(correo: String): String
+    }
+    
+    class ControladorDirector {
+        -directorActual: Director
+        -proyectoDAO: ProyectoDAO
+        -estudianteDAO: EstudianteDAO
+        -ayudanteDAO: AyudanteDAO
+        -asistenteDAO: AsistenteDAO
+        -tecnicoDAO: TecnicoDAO
+        --
+        +registrarAyudante(proyecto: Proyectos, estudiante: Estudiante, horas: int, meses: int): ResultadoOperacion
+        +registrarAsistente(proyecto: Proyectos, estudiante: Estudiante, horas: int, meses: int): ResultadoOperacion
+        +registrarTecnico(tecnico: TecnicoInvestigacion, proyecto: Proyectos): ResultadoOperacion
+        +crearProyecto(...): ResultadoOperacion
+        +darDeBajaAyudante(codigo: String, motivo: String, fecha: Date): ResultadoOperacion
+        +obtenerProyectoDelDirector(): Proyectos
+        +consultarAyudantesDelProyecto(): List<Ayudante>
+        +obtenerAsistentesProyecto(): List<AsistenteInvestigacion>
+        +obtenerTecnicosProyecto(): List<TecnicoInvestigacion>
+        +puedeCrearProyecto(): boolean
+    }
+    
+    class ControladorJefaDepartamento {
+        -jefaDepartamento: JefaDepartamento
+        -ayudanteDAO: AyudanteDAO
+        -proyectoDAO: ProyectoDAO
+        --
+        +filtrarAyudantes(filtros: Map<String, Object>): List<Ayudante>
+        +obtenerAyudantesActivos(): List<Ayudante>
+        +obtenerAyudantesInactivos(): List<Ayudante>
+        +obtenerAyudantesPorCarrera(carrera: String): List<Ayudante>
+        +obtenerAyudantesPorNivel(nivel: int): List<Ayudante>
+        +obtenerTodosAyudantes(): List<Ayudante>
+        +obtenerTodosProyectos(): List<Proyectos>
+        +obtenerEstadisticasGenerales(): Map<String, Object>
+        +obtenerEstadisticasPorCarrera(): Map<String, Map<String, Object>>
+        +obtenerEstadisticasPorNivel(): Map<Integer, Map<String, Object>>
+        +obtenerResumenProyectos(): List<Object[]>
+        +generarReporteGeneral(): Reporte
+        +generarReportePorProyecto(codigoProyecto: String): Reporte
+        +generarReportePorCarrera(carrera: String): Reporte
+        +generarReportePorNivel(nivel: int): Reporte
+        +obtenerNotificaciones(): List<Notificacion>
+        +marcarNotificacionesComoLeidas(): void
+    }
+}
+
+' ============ RELACIONES DE HERENCIA ============
+
+MiembroEPN <|-- Director
+MiembroEPN <|-- Estudiante
+MiembroEPN <|-- Ayudante
+MiembroEPN <|-- JefaDepartamento
+Ayudante <|-- AsistenteInvestigacion
+
+' ============ RELACIONES DE COMPOSICIÓN Y AGREGACIÓN ============
+
+Proyectos *-- TipoProyecto
+TipoProyecto o-- CategoriaProyecto
+Proyectos o-- Director : "dirigido por"
+Ayudante o-- Proyectos : "asignado a"
+TecnicoInvestigacion o-- Proyectos : "asignado a"
+JefaDepartamento *-- "0..*" Notificacion : "recibe"
+Notificacion o-- Proyectos : "relacionado a"
+Notificacion o-- Ayudante : "relacionado a"
+
+' ============ RELACIONES DE USO/DEPENDENCIA ============
+
+Director ..> Proyectos : "<<crea>>"
+Director ..> ResultadoOperacion : "<<retorna>>"
+Director ..> Estudiante : "<<valida>>"
+Director ..> TecnicoInvestigacion : "<<prepara>>"
+
+Estudiante ..> Ayudante : "<<convierte a>>"
+Estudiante ..> AsistenteInvestigacion : "<<convierte a>>"
+Estudiante ..> ResultadoOperacion : "<<retorna>>"
+
+Ayudante ..> ResultadoOperacion : "<<retorna>>"
+TecnicoInvestigacion ..> ResultadoOperacion : "<<retorna>>"
+
+JefaDepartamento ..> ServicioDeEstadisticas : "<<usa>>"
+JefaDepartamento ..> ServicioDeReportes : "<<usa>>"
+JefaDepartamento ..> Ayudante : "<<filtra>>"
+JefaDepartamento ..> Reporte : "<<genera>>"
+
+ServicioDeEstadisticas ..> Ayudante : "<<analiza>>"
+ServicioDeReportes ..> Ayudante : "<<reporta>>"
+ServicioDeReportes ..> Proyectos : "<<reporta>>"
+ServicioDeReportes ..> Reporte : "<<crea>>"
+
+' ============ RELACIONES CONTROLADORES ============
+
+ControladorAutenticacion ..> MiembroEPNDAO : "<<usa>>"
+ControladorAutenticacion ..> ResultadoOperacion : "<<retorna>>"
+
+ControladorDirector ..> Director : "<<delega lógica>>"
+ControladorDirector ..> ProyectoDAO : "<<usa>>"
+ControladorDirector ..> EstudianteDAO : "<<usa>>"
+ControladorDirector ..> AyudanteDAO : "<<usa>>"
+ControladorDirector ..> AsistenteDAO : "<<usa>>"
+ControladorDirector ..> TecnicoDAO : "<<usa>>"
+ControladorDirector ..> ResultadoOperacion : "<<retorna>>"
+
+ControladorJefaDepartamento ..> JefaDepartamento : "<<delega lógica>>"
+ControladorJefaDepartamento ..> AyudanteDAO : "<<usa>>"
+ControladorJefaDepartamento ..> ProyectoDAO : "<<usa>>"
+ControladorJefaDepartamento ..> Reporte : "<<retorna>>"
+
+' ============ RELACIONES DAOs ============
+
+IDAO <|.. EstudianteDAO
+IDAO <|.. AyudanteDAO
+IDAO <|.. AsistenteDAO
+IDAO <|.. TecnicoDAO
+IDAO <|.. ProyectoDAO
+IDAO <|.. NotificacionDAO
+
+MiembroEPNDAO ..> ConexionBD : "<<usa>>"
+EstudianteDAO ..> ConexionBD : "<<usa>>"
+AyudanteDAO ..> ConexionBD : "<<usa>>"
+AsistenteDAO ..> ConexionBD : "<<usa>>"
+TecnicoDAO ..> ConexionBD : "<<usa>>"
+ProyectoDAO ..> ConexionBD : "<<usa>>"
+NotificacionDAO ..> ConexionBD : "<<usa>>"
+
+EstudianteDAO ..> Estudiante : "<<gestiona>>"
+AyudanteDAO ..> Ayudante : "<<gestiona>>"
+AsistenteDAO ..> AsistenteInvestigacion : "<<gestiona>>"
+TecnicoDAO ..> TecnicoInvestigacion : "<<gestiona>>"
+ProyectoDAO ..> Proyectos : "<<gestiona>>"
+NotificacionDAO ..> Notificacion : "<<gestiona>>"
+MiembroEPNDAO ..> MiembroEPN : "<<gestiona>>"
+
+' ============ NOTAS ============
+
+note right of MiembroEPN
+  Clase base abstracta para todos
+  los miembros de la institución.
+  Aplica encapsulación con
+  atributos privados y validación.
+end note
+
+note right of JefaDepartamento
+  Patrón Singleton
+  Única instancia en el sistema
+  Gestiona notificaciones y
+  delega lógica a servicios
+end note
+
+note right of Director
+  Patrón Lazy Loading
+  El proyecto se carga vía DAO
+  No se mantiene como atributo
+end note
+
+note bottom of ServicioDeEstadisticas
+  Servicio estático reutilizable
+  para cálculos estadísticos
+  No mantiene estado
+end note
+
+note bottom of ServicioDeReportes
+  Servicio estático para
+  generación de reportes PDF
+  Delega a clase Reporte
+end note
+
+note left of ConexionBD
+  Patrón Singleton
+  Gestiona conexiones
+  a SQLite
+end note
+
+note right of ControladorDirector
+  Coordina persistencia (DAO)
+  Delega lógica de dominio
+  a Director
+end note
+
+note right of ControladorJefaDepartamento
+  Coordina persistencia (DAO)
+  Delega lógica de dominio
+  a JefaDepartamento
+end note
+
+@enduml

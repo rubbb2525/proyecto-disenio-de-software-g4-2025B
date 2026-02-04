@@ -1,10 +1,29 @@
--- Script SQL para SQLite3 - Sistema Gestión Ayudantes FIS-EPN
--- Este archivo crea la estructura de la BD SQLite
+-- ====================================================================
+-- SCRIPT INTEGRADO: SISTEMA GESTIÓN AYUDANTES E INVESTIGACIÓN FIS-EPN
+-- Base de datos: SQLite3
+-- ====================================================================
 
--- Habilitar claves foráneas
+-- 1. CONFIGURACIÓN INICIAL
+-- --------------------------------------------------------------------
 PRAGMA foreign_keys = ON;
+DROP TABLE IF EXISTS notificaciones;
+DROP TABLE IF EXISTS reportes;
+DROP TABLE IF EXISTS tecnicos;
+DROP TABLE IF EXISTS asistentes;
+DROP TABLE IF EXISTS ayudantes;
+DROP TABLE IF EXISTS proyectos;
+DROP TABLE IF EXISTS estudiantes;
+DROP TABLE IF EXISTS miembros_epn;
+DROP VIEW IF EXISTS v_estadisticas_personal;
+DROP VIEW IF EXISTS v_personal_activo_por_proyecto;
+DROP VIEW IF EXISTS v_personal_completo;
 
--- Tabla de miembros EPN (base)
+-- ====================================================================
+-- 2. CREACIÓN DE TABLAS (ESTRUCTURA)
+-- ==================================================================== 
+-- //REMPLAZAR SALARIO MENSUAL POR MESES CONTRATADOS EN LAS TABLAS DE ASISTENTES, TECNICOS Y AYUDANTES
+-- 2.1 Tabla Base: Miembros EPN
+-- Contiene a todos los usuarios con vínculo institucional (Admin, Directores, Estudiantes, Asistentes)
 CREATE TABLE IF NOT EXISTS miembros_epn (
     codigo_unico TEXT PRIMARY KEY,
     cedula TEXT NOT NULL UNIQUE,
@@ -17,7 +36,7 @@ CREATE TABLE IF NOT EXISTS miembros_epn (
     estado TEXT NOT NULL DEFAULT 'ACTIVO'
 );
 
--- Tabla de estudiantes
+-- 2.2 Tabla Estudiantes (Detalle académico)
 CREATE TABLE IF NOT EXISTS estudiantes (
     codigo_unico TEXT PRIMARY KEY,
     cedula TEXT NOT NULL UNIQUE,
@@ -31,21 +50,24 @@ CREATE TABLE IF NOT EXISTS estudiantes (
     FOREIGN KEY (codigo_unico) REFERENCES miembros_epn(codigo_unico)
 );
 
--- Tabla de proyectos
+-- 2.3 Tabla Proyectos (Entidad Central)
 CREATE TABLE IF NOT EXISTS proyectos (
     codigo_proyecto TEXT PRIMARY KEY,
     nombre_proyecto TEXT NOT NULL,
-    descripcion TEXT,
+    descripcion TEXT, -- NO AGREGAR A LOS FORMULARIOS
     fecha_inicio DATETIME NOT NULL,
     fecha_fin DATETIME NOT NULL,
     estado TEXT NOT NULL DEFAULT 'ACTIVO',
-    tipo_proyecto TEXT NOT NULL,
-    ayudantes_planificados INTEGER NOT NULL,
+    categoria_proyecto TEXT NOT NULL DEFAULT 'INVESTIGACION' CHECK(categoria_proyecto IN ('INVESTIGACION','VINCULACION','TRANSFERENCIA_TECNOLOGICA')),
+    tipo_proyecto TEXT NOT NULL CHECK(tipo_proyecto IN ('INTERNO', 'SEMILLA', 'GRUPAL', 'MULTIDISCIPLINARIO', 'TRANSFERENCIA_TECNOLOGICA', 'TRANSFERENCIA', 'VINCULACION', 'VINCULACION_CON_FINANCIAMIENTO')),
+    ayudantes_planificados INTEGER NOT NULL DEFAULT 0,
+    tecnicos_planificados INTEGER NOT NULL DEFAULT 0,
+    asistentes_planificados INTEGER NOT NULL DEFAULT 0,
     codigo_director TEXT,
     FOREIGN KEY (codigo_director) REFERENCES miembros_epn(codigo_unico)
 );
 
--- Tabla de ayudantes
+-- 2.4 Tabla Ayudantes (Estudiantes vinculados a proyectos)
 CREATE TABLE IF NOT EXISTS ayudantes (
     codigo_unico TEXT PRIMARY KEY,
     cedula TEXT NOT NULL UNIQUE,
@@ -57,7 +79,7 @@ CREATE TABLE IF NOT EXISTS ayudantes (
     nivel INTEGER NOT NULL,
     ira REAL NOT NULL,
     horas_semanales INTEGER NOT NULL,
-    salario_mensual REAL NOT NULL,
+    meses_contratados INTEGER NOT NULL, --REEMPLAZAR SALARIO MENSUAL POR MESES CONTRATADOS
     estado TEXT NOT NULL DEFAULT 'ACTIVO',
     fecha_registro DATETIME NOT NULL,
     fecha_finalizacion DATETIME,
@@ -67,7 +89,48 @@ CREATE TABLE IF NOT EXISTS ayudantes (
     FOREIGN KEY (codigo_proyecto) REFERENCES proyectos(codigo_proyecto)
 );
 
--- Tabla de notificaciones
+-- 2.5 Tabla Asistentes de Investigación (NUEVA - Contratación profesional interna)
+CREATE TABLE IF NOT EXISTS asistentes (
+    codigo_unico TEXT PRIMARY KEY,
+    cedula TEXT NOT NULL UNIQUE,
+    correo_institucional TEXT NOT NULL UNIQUE,
+    nombres TEXT NOT NULL,
+    apellidos TEXT NOT NULL,
+    telefono TEXT,
+    carrera TEXT NOT NULL,
+    nivel INTEGER NOT NULL,
+    ira REAL NOT NULL,
+    horas_semanales INTEGER NOT NULL,
+    meses_contratados INTEGER NOT NULL,
+    estado TEXT NOT NULL DEFAULT 'ACTIVO',
+    fecha_registro DATETIME NOT NULL,
+    fecha_finalizacion DATETIME,
+    motivo_salida TEXT,
+    codigo_proyecto TEXT,
+    FOREIGN KEY (codigo_unico) REFERENCES miembros_epn(codigo_unico),
+    FOREIGN KEY (codigo_proyecto) REFERENCES proyectos(codigo_proyecto)
+);
+
+-- 2.6 Tabla Técnicos de Investigación (NUEVA - Personal Externo)
+-- No referencia a miembros_epn porque pueden ser externos sin código único institucional
+CREATE TABLE IF NOT EXISTS tecnicos (
+    id_tecnico TEXT PRIMARY KEY,
+    cedula TEXT NOT NULL UNIQUE,
+    correo_electronico TEXT NOT NULL UNIQUE,
+    nombres TEXT NOT NULL,
+    apellidos TEXT NOT NULL,
+    telefono TEXT,
+    horas_semanales INTEGER NOT NULL,
+    meses_contratados INTEGER NOT NULL,
+    estado TEXT NOT NULL DEFAULT 'ACTIVO',
+    fecha_registro DATETIME NOT NULL,
+    fecha_finalizacion DATETIME,
+    motivo_salida TEXT,
+    codigo_proyecto TEXT,
+    FOREIGN KEY (codigo_proyecto) REFERENCES proyectos(codigo_proyecto)
+);
+
+-- 2.7 Tabla Notificaciones
 CREATE TABLE IF NOT EXISTS notificaciones (
     id_notificacion TEXT PRIMARY KEY,
     fecha DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -80,7 +143,7 @@ CREATE TABLE IF NOT EXISTS notificaciones (
     FOREIGN KEY (codigo_ayudante) REFERENCES ayudantes(codigo_unico)
 );
 
--- Tabla de reportes
+-- 2.8 Tabla Reportes
 CREATE TABLE IF NOT EXISTS reportes (
     id_reporte TEXT PRIMARY KEY,
     fecha_generacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -90,23 +153,119 @@ CREATE TABLE IF NOT EXISTS reportes (
     estadisticas TEXT
 );
 
--- Crear índices para optimización
+-- ====================================================================
+-- 3. CREACIÓN DE VISTAS (VIEWS)
+-- ====================================================================
+
+-- 3.1 Vista Unificada de Personal (Ayudantes + Asistentes + Técnicos)
+CREATE VIEW IF NOT EXISTS v_personal_completo AS
+SELECT 
+    codigo_unico,
+    nombres,
+    apellidos,
+    cedula,
+    'AYUDANTE' as tipo_personal,
+    carrera as area_trabajo,
+    nivel,
+    ira,
+    horas_semanales,
+    meses_contratados,
+    estado,
+    fecha_registro,
+    codigo_proyecto
+FROM ayudantes
+UNION ALL
+SELECT 
+    codigo_unico,
+    nombres,
+    apellidos,
+    cedula,
+    'ASISTENTE' as tipo_personal,
+    carrera as area_trabajo,
+    nivel,
+    ira,
+    horas_semanales,
+    meses_contratados,
+    estado,
+    fecha_registro,
+    codigo_proyecto
+FROM asistentes
+UNION ALL
+SELECT 
+    id_tecnico as codigo_unico,
+    nombres,
+    apellidos,
+    cedula,
+    'TECNICO' as tipo_personal,
+    correo_electronico as area_trabajo,
+    NULL as nivel,
+    NULL as ira,
+    horas_semanales,
+    meses_contratados,
+    estado,
+    fecha_registro,
+    codigo_proyecto
+FROM tecnicos;
+
+-- 3.2 Vista Personal Activo por Proyecto
+CREATE VIEW IF NOT EXISTS v_personal_activo_por_proyecto AS
+SELECT 
+    p.codigo_proyecto,
+    p.nombre_proyecto,
+    pc.tipo_personal,
+    pc.nombres || ' ' || pc.apellidos as nombre_completo,
+    pc.area_trabajo,
+    pc.horas_semanales,
+    pc.meses_contratados,
+    pc.estado
+FROM proyectos p
+LEFT JOIN v_personal_completo pc ON p.codigo_proyecto = pc.codigo_proyecto
+WHERE pc.estado = 'ACTIVO'
+ORDER BY p.codigo_proyecto, pc.tipo_personal;
+
+-- 3.3 Vista Estadísticas
+CREATE VIEW IF NOT EXISTS v_estadisticas_personal AS
+SELECT 
+    tipo_personal,
+    COUNT(*) as total,
+    SUM(CASE WHEN estado = 'ACTIVO' THEN 1 ELSE 0 END) as activos,
+    SUM(horas_semanales) as horas_totales,
+    SUM(meses_contratados) as meses_totales_contratados,
+    AVG(meses_contratados) as meses_promedio
+FROM v_personal_completo
+GROUP BY tipo_personal;
+
+-- ====================================================================
+-- 4. ÍNDICES (OPTIMIZACIÓN)
+-- ====================================================================
+-- Índices Generales
 CREATE INDEX IF NOT EXISTS idx_rol ON miembros_epn(rol);
 CREATE INDEX IF NOT EXISTS idx_correo ON miembros_epn(correo_institucional);
-CREATE INDEX IF NOT EXISTS idx_proyecto_ayudantes ON ayudantes(codigo_proyecto);
 CREATE INDEX IF NOT EXISTS idx_proyecto_director ON proyectos(codigo_director);
 CREATE INDEX IF NOT EXISTS idx_notificacion_tipo ON notificaciones(tipo);
 CREATE INDEX IF NOT EXISTS idx_estudiante_ira ON estudiantes(ira);
 
+-- Índices Ayudantes
+CREATE INDEX IF NOT EXISTS idx_proyecto_ayudantes ON ayudantes(codigo_proyecto);
+
+-- Índices Asistentes
+CREATE INDEX IF NOT EXISTS idx_asistentes_estado ON asistentes(estado);
+CREATE INDEX IF NOT EXISTS idx_asistentes_proyecto ON asistentes(codigo_proyecto);
+CREATE INDEX IF NOT EXISTS idx_asistentes_carrera ON asistentes(carrera);
+
+-- Índices Técnicos
+CREATE INDEX IF NOT EXISTS idx_tecnicos_estado ON tecnicos(estado);
+CREATE INDEX IF NOT EXISTS idx_tecnicos_proyecto ON tecnicos(codigo_proyecto);
+
 -- ====================================================================
--- DATOS DE PRUEBA
+-- 5. INSERCIÓN DE DATOS DE PRUEBA
 -- ====================================================================
--- Jefa de Departamento (única usuaria administrativa además de Directores)
+
+-- 5.1 Inserción Miembros EPN: Jefa y Directores
 INSERT OR IGNORE INTO miembros_epn VALUES 
 ('JEFA001', '1010101010', 'jefa@fis.epn.edu.ec', 'admin', 
  'JEFA', 'DEPARTAMENTO', '0996000000', 'JEFA_DEPARTAMENTO', 'ACTIVO');
 
--- Directores únicos identificados en los proyectos
 INSERT OR IGNORE INTO miembros_epn (codigo_unico, cedula, correo_institucional, password, nombres, apellidos, telefono, rol, estado)
 VALUES 
 ('DIR001', '1700000001', 'sandra.sanchez@epn.edu.ec', 'S@ndr4_2024!Epn', 'SANDRA PATRICIA', 'SANCHEZ GORDON', NULL, 'DIRECTOR', 'ACTIVO'),
@@ -127,7 +286,7 @@ VALUES
 ('DIR016', '1700000016', 'marco.benalcazar@epn.edu.ec', 'M@rco_B3n@lc@z@r', 'MARCO ENRIQUE', 'BENALCAZAR PALACIOS', NULL, 'DIRECTOR', 'ACTIVO'),
 ('DIR017', '1700000017', 'marco.santorum@epn.edu.ec', 'M@rco_S@nt0rum!', 'MARCO OSWALDO', 'SANTORUM GAIBOR', NULL, 'DIRECTOR', 'ACTIVO');
 
--- Estudiantes (sin acceso al sistema, password fijo 'N/A')
+-- 5.2 Inserción Miembros EPN: Estudiantes (Para login)
 INSERT OR IGNORE INTO miembros_epn (codigo_unico, cedula, correo_institucional, password, nombres, apellidos, telefono, rol, estado)
 VALUES 
 ('202111079', '1760107340', 'abdelfatah.abdelrahman@epn.edu.ec', 'N/A', 'ABDELFATAH', 'ABDELRAHMAN TAREK SELIM', NULL, 'ESTUDIANTE', 'ACTIVO'),
@@ -141,7 +300,7 @@ VALUES
 ('202110549', '1726623000', 'fernando.aldaz@epn.edu.ec', 'N/A', 'FERNANDO JOSUE', 'ALDAZ LASCANO', NULL, 'ESTUDIANTE', 'ACTIVO'),
 ('202120757', '1751424324', 'carlos.aleman@epn.edu.ec', 'N/A', 'CARLOS ALEJANDRO', 'ALEMAN OSORIO', NULL, 'ESTUDIANTE', 'ACTIVO');
 
--- Inserción en tabla estudiantes
+-- 5.3 Inserción Tabla Estudiantes (Detalle)
 INSERT OR IGNORE INTO estudiantes (codigo_unico, cedula, correo_institucional, nombres, apellidos, telefono, carrera, ira, nivel)
 VALUES 
 ('202111079', '1760107340', 'abdelfatah.abdelrahman@epn.edu.ec', 'ABDELFATAH', 'ABDELRAHMAN TAREK SELIM', NULL, 'SOFTWARE', 7.5, 6),
@@ -155,7 +314,7 @@ VALUES
 ('202110549', '1726623000', 'fernando.aldaz@epn.edu.ec', 'FERNANDO JOSUE', 'ALDAZ LASCANO', NULL, 'SOFTWARE', 8.3, 6),
 ('202120757', '1751424324', 'carlos.aleman@epn.edu.ec', 'CARLOS ALEJANDRO', 'ALEMAN OSORIO', NULL, 'SOFTWARE', 7.6, 5);
 
--- Proyectos
+-- 5.4 Inserción Proyectos
 INSERT OR IGNORE INTO proyectos (codigo_proyecto, nombre_proyecto, descripcion, fecha_inicio, fecha_fin, estado, tipo_proyecto, ayudantes_planificados, codigo_director)
 VALUES 
 ('PII-19-02', 'Modelo y Prototipo para Creación de Perfiles de Estudiantes con Discapacidades en Ambientes e-Learning', 'Proyecto enfocado en la creación de perfiles accesibles para estudiantes con discapacidades en entornos e-learning.', '2020-01-01', '2021-12-31', 'Cerrado', 'INTERNO', 2, 'DIR001'),
@@ -186,4 +345,32 @@ VALUES
 ('PIE-INEDITA-01-2018', 'Un framework como herramienta de apoyo para mejorar las habilidades socio-cognitivas en el marco de una inclusión plena para personas con discapacidad intelectual, independientemente del lugar de residencia', 'Framework para desarrollo de habilidades socio-cognitivas en personas con discapacidad intelectual.', '2019-01-01', '2021-12-31', 'Proceso de cierre', 'TRANSFERENCIA', 3, 'DIR017'),
 ('PIE-CEPRA-XI-2017-15', 'Sistema de tele-rehabilitación para la auto-reeducación de los pacientes después de una cirugía de sustitución de cadera', 'Plataforma de tele-rehabilitación post-operatoria para pacientes de cirugía de cadera.', '2017-01-01', '2019-12-31', 'Cerrado', 'TRANSFERENCIA', 2, 'DIR001');
 
--- Nota: Ayudantes se insertarán dinámicamente (no requieren password)
+-- 5.5 Inserción Ejemplo Asistentes (Requiere inserción previa en miembros_epn)
+-- Paso 1: Crear usuario
+INSERT INTO miembros_epn (codigo_unico, cedula, correo_institucional, password, nombres, apellidos, telefono, rol, estado)
+VALUES ('ASIST001', '1234567890', 'asistente.prueba@epn.edu.ec', 'N/A', 'JUAN CARLOS', 'PEREZ LOPEZ', '0999999999', 'ASISTENTE', 'ACTIVO');
+
+-- Paso 2: Crear detalle de asistente vinculado a proyecto PII-19-02 (Existente)
+INSERT INTO asistentes (
+    codigo_unico, cedula, correo_institucional, nombres, apellidos, telefono,
+    carrera, nivel, ira,
+    horas_semanales, meses_contratados, estado, fecha_registro, codigo_proyecto
+) VALUES (
+    'ASIST001', '1234567890', 'asistente.prueba@epn.edu.ec', 
+    'JUAN CARLOS', 'PEREZ LOPEZ', '0999999999',
+    'SOFTWARE', 10, 9.5,
+    30, 6, 'ACTIVO', datetime('now'), 'PII-19-02'
+);
+
+-- 5.6 Inserción Ejemplo Técnicos (Directo, sin miembros_epn)
+-- Vinculado a proyecto PII-19-02 (Existente)
+INSERT INTO tecnicos (
+    id_tecnico, cedula, correo_electronico, nombres, apellidos, telefono,
+    horas_semanales, meses_contratados, estado, fecha_registro, codigo_proyecto
+) VALUES (
+    'TEC001', '0987654321', 'maria.gonzalez@epn.edu.ec',
+    'MARIA FERNANDA', 'GONZALEZ TORRES', '0988888888',
+    40, 6, 'ACTIVO', datetime('now'), 'PII-19-02'
+);
+
+-- Fin del script integrado

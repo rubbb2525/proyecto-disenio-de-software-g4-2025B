@@ -11,7 +11,8 @@ import javax.swing.*;
 import java.awt.*;
 
 /**
- * Diálogo de registro de ayudante con búsqueda de estudiante y captura de horas/salario.
+ * Diálogo de registro de ayudante con búsqueda de estudiante y captura de horas/meses contratados.
+ * Formulario siempre visible con scrollbar. Si no se encuentra, abre una ventana emergente separada.
  */
 public class DialogoFormularioAyudante extends JDialog {
     private final ControladorDirector controlador;
@@ -27,7 +28,7 @@ public class DialogoFormularioAyudante extends JDialog {
     private JTextField txtNivel;
     private JTextField txtIra;
     private JTextField txtHoras;
-    private JTextField txtSalario;
+    private JTextField txtMeses;
     private StyledButton btnBuscar;
     private StyledButton btnGuardar;
     private StyledButton btnCancelar;
@@ -54,6 +55,7 @@ public class DialogoFormularioAyudante extends JDialog {
         content.add(crearFormulario(), BorderLayout.CENTER);
         content.add(crearBotonera(), BorderLayout.SOUTH);
 
+        // Agregar scroll al contenido principal
         add(new JScrollPane(content), BorderLayout.CENTER);
         configurarEventos();
     }
@@ -100,7 +102,7 @@ public class DialogoFormularioAyudante extends JDialog {
         addField(form, gbc, "Nivel", txtNivel = buildReadOnly());
         addField(form, gbc, "IRA", txtIra = buildReadOnly());
         addField(form, gbc, "Horas semanales (máx 32)", txtHoras = new JTextField());
-        addField(form, gbc, "Salario mensual", txtSalario = new JTextField());
+        addField(form, gbc, "Meses Contratados", txtMeses = new JTextField());
 
         return form;
     }
@@ -133,16 +135,7 @@ public class DialogoFormularioAyudante extends JDialog {
     }
 
     private void configurarEventos() {
-        // Búsqueda en vivo al escribir
-        txtBusqueda.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-            @Override
-            public void insertUpdate(javax.swing.event.DocumentEvent e) { buscar(); }
-            @Override
-            public void removeUpdate(javax.swing.event.DocumentEvent e) { buscar(); }
-            @Override
-            public void changedUpdate(javax.swing.event.DocumentEvent e) { }
-        });
-        
+        // Solo buscar cuando se presiona Enter en el campo o se hace clic en el botón
         btnBuscar.addActionListener(e -> buscar());
         txtBusqueda.addActionListener(e -> buscar());
 
@@ -162,12 +155,30 @@ public class DialogoFormularioAyudante extends JDialog {
             estudianteSeleccionado = null;
             return;
         }
+        
         Estudiante est = controlador.buscarEstudiante(criterio);
         if (est == null) {
             lblEstadoBusqueda.setText("✗ Estudiante no registrado");
             lblEstadoBusqueda.setForeground(new Color(192, 57, 43));
             limpiarCampos();
-            estudianteSeleccionado = null;
+            
+            // Abrir ventana emergente de "No registrado"
+            DialogoEstudianteNoRegistrado dialogo = new DialogoEstudianteNoRegistrado(
+                (Frame) SwingUtilities.getWindowAncestor(this),
+                controlador,
+                "ayudante"
+            );
+            dialogo.setVisible(true);
+            
+            // Si se registró el estudiante en la ventana emergente, intentar buscarlo nuevamente
+            Estudiante estudianteNuevo = controlador.buscarEstudiante(criterio);
+            if (estudianteNuevo != null) {
+                est = estudianteNuevo;
+                lblEstadoBusqueda.setText("✓ Estudiante registrado");
+                lblEstadoBusqueda.setForeground(new Color(39, 174, 96));
+                estudianteSeleccionado = est;
+                poblarDatos(est);
+            }
             return;
         }
         
@@ -206,6 +217,8 @@ public class DialogoFormularioAyudante extends JDialog {
         txtCarrera.setText("");
         txtNivel.setText("");
         txtIra.setText("");
+        txtHoras.setText("");
+        txtMeses.setText("");
     }
 
     private void guardar() {
@@ -221,24 +234,22 @@ public class DialogoFormularioAyudante extends JDialog {
         int horas = 0;
         try {
             horas = Integer.parseInt(txtHoras.getText().trim());
-            if (horas <= 0 || horas > 30) {
-                errores.add("Las horas semanales deben estar entre 1 y 30");
+            if (horas <= 0 || horas > 32) {
+                errores.add("Las horas semanales deben estar entre 1 y 32");
             }
         } catch (NumberFormatException e) {
             errores.add("Horas semanales inválidas (debe ser un número entero)");
         }
         
-        // Validar salario
-        double salario = 0;
+        // Validar meses
+        int meses = 0;
         try {
-            salario = Double.parseDouble(txtSalario.getText().trim());
-            if (salario <= 0) {
-                errores.add("El salario mensual debe ser mayor a 0");
-            } else if (salario > 10000) {
-                errores.add("El salario mensual parece excesivo (máximo 10,000)");
+            meses = Integer.parseInt(txtMeses.getText().trim());
+            if (meses <= 0 || meses > 12) {
+                errores.add("Los meses deben estar entre 1 y 12");
             }
         } catch (NumberFormatException e) {
-            errores.add("Salario mensual inválido (debe ser un número)");
+            errores.add("Meses inválidos (debe ser un número entero)");
         }
         
         if (!errores.isEmpty()) {
@@ -251,7 +262,7 @@ public class DialogoFormularioAyudante extends JDialog {
             return;
         }
         
-        ResultadoOperacion res = controlador.registrarAyudante(estudianteSeleccionado.getCodigoUnico(), horas, salario);
+        ResultadoOperacion res = controlador.registrarAyudante(estudianteSeleccionado.getCodigoUnico(), horas, meses);
         if (res.esExitoso()) {
             JOptionPane.showMessageDialog(this, res.getMensaje(), "Éxito", JOptionPane.INFORMATION_MESSAGE);
             guardado = true;
@@ -272,21 +283,21 @@ public class DialogoFormularioAyudante extends JDialog {
         // Validar horas
         try {
             int horas = Integer.parseInt(txtHoras.getText().trim());
-            if (horas <= 0 || horas > 30) {
-                errores.add("Las horas semanales deben estar entre 1 y 30");
+            if (horas <= 0 || horas > 32) {
+                errores.add("Las horas semanales deben estar entre 1 y 32");
             }
         } catch (NumberFormatException e) {
             errores.add("Horas semanales inválidas (debe ser un número entero)");
         }
         
-        // Validar salario
+        // Validar meses
         try {
-            double salario = Double.parseDouble(txtSalario.getText().trim());
-            if (salario <= 0) {
-                errores.add("El salario mensual debe ser mayor a 0");
+            int meses = Integer.parseInt(txtMeses.getText().trim());
+            if (meses <= 0 || meses > 12) {
+                errores.add("Los meses deben estar entre 1 y 12");
             }
         } catch (NumberFormatException e) {
-            errores.add("Salario mensual inválido (debe ser un número)");
+            errores.add("Meses inválidos (debe ser un número entero)");
         }
         
         if (!errores.isEmpty()) {

@@ -1,438 +1,606 @@
 package view;
 
-import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
-import javax.swing.table.JTableHeader;
 import controller.ControladorJefaDepartamento;
 import model.Ayudante;
-import model.ProyectoInvestigacion;
+import model.AsistenteInvestigacion;
 import model.Notificacion;
+import model.Proyectos;
 import model.Reporte;
+import model.TecnicoInvestigacion;
 import view.componentes.AdvancedTableModel;
-import java.util.List;
-import java.util.Map;
-import java.awt.*;
-import view.componentes.StyledButton;
-import view.componentes.IconManager;
+import view.componentes.ConstantesVisuales;
 import view.componentes.RoundedBorder;
-import view.componentes.BadgeButton;
+import view.componentes.StyledButton;
 import view.componentes.ToastMessage;
-import view.componentes.PanelEstadistica;
-import java.awt.event.KeyEvent;
+
+import javax.swing.*;
+import javax.swing.table.JTableHeader;
+import javax.swing.table.DefaultTableCellRenderer;
+import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.io.File;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
- * Ventana principal de la Jefa de Departamento
+ * Dashboard Jefa de Departamento - VERSIÓN MEJORADA
+ * Sin emojis ni iconos, solo tipografía y colores
  */
 public class VistaJefaDepartamento extends JFrame {
-    private static final Color COLOR_FONDO = new Color(245, 247, 250);
-    private static final Color COLOR_TARJETA = Color.WHITE;
-    private static final Color COLOR_PRIMARIO = new Color(0, 61, 165);
-    private static final Color COLOR_BORDE = new Color(225, 232, 237);
-    private static final Color COLOR_TEXTO = new Color(44, 62, 80);
+    private static final Color COLOR_FONDO = ConstantesVisuales.COLOR_FONDO_PRINCIPAL;
+    private static final Color COLOR_TARJETA = ConstantesVisuales.COLOR_TARJETA;
+    private static final Color COLOR_PRIMARIO = ConstantesVisuales.COLOR_PRIMARIO;
+    private static final Color COLOR_BORDE = ConstantesVisuales.COLOR_BORDE;
+    private static final Color COLOR_TEXTO = ConstantesVisuales.COLOR_TEXTO_PRINCIPAL;
+
+    private final ControladorJefaDepartamento controlador;
+    private JPanel panelProyectos;
+    private JTabbedPane tabs;
+    private StyledButton btnNotificaciones;
+    private StyledButton btnReportes;
+    private JLabel lblContadorNotif;
+
+    // Detalle del proyecto
+    private JLabel lblNombreProyecto;
+    private JLabel lblTipoProyecto;
+    private JLabel lblDirector;
+    private JLabel lblFechas;
+    private JLabel lblEstadoProyecto;
+    private JLabel lblAyudantesResumen;
+    private JLabel lblAsistentesResumen;
+    private JLabel lblTecnicosResumen;
+
+    private AdvancedTableModel modeloAyudantes;
+    private AdvancedTableModel modeloAsistentes;
+    private AdvancedTableModel modeloTecnicos;
 
     private JTable tablaAyudantes;
-    private JTable tablaProyectos;
-    private StyledButton btnFiltrar;
-    private StyledButton btnGenerarReporte;
-    private BadgeButton btnVerNotificaciones;
-    private JComboBox<Object> comboProyectos;
-    private JComboBox<String> comboCarreras;
-    private JComboBox<Integer> comboNivel;
-    private JComboBox<String> comboEstado;
-    private ControladorJefaDepartamento controlador;
-    private AdvancedTableModel modeloTabla;
-    private AdvancedTableModel modeloProyectos;
-    private JTextField campoBusqueda;
-    private int ultimasNotificacionesCount = 0;
-    private javax.swing.Timer timerNotificaciones;
-    private PanelEstadistica panelTotalAyudantes;
-    private PanelEstadistica panelProyectosActivos;
-    private PanelEstadistica panelCarrerasRegistradas;
+    private JTable tablaAsistentes;
+    private JTable tablaTecnicos;
 
-    // Item para combo de proyectos: muestra nombre, guarda código
-    private static class ProyectoItem {
-        private final String codigo;
-        private final String nombre;
-        ProyectoItem(String codigo, String nombre) { this.codigo = codigo; this.nombre = nombre; }
-        @Override public String toString() { return nombre; }
-        public String getCodigo() { return codigo; }
-        public String getNombre() { return nombre; }
-    }
+    private Proyectos proyectoSeleccionado;
+    private final SimpleDateFormat formatoFecha = new SimpleDateFormat("dd/MM/yyyy");
+    
+    private JPanel tarjetaSeleccionada;
 
     public VistaJefaDepartamento(ControladorJefaDepartamento controlador) {
         this.controlador = controlador;
-        setTitle("Sistema Gestión Ayudantes - Jefa Departamento");
+        setTitle("Dashboard - Jefa de Departamento");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1080, 720);
+        setSize(1400, 850);
         setLocationRelativeTo(null);
+        setMinimumSize(new Dimension(1200, 700));
 
-        // Sincronizar notificaciones desde BD vía controlador
-        controlador.sincronizarNotificacionesConBD();
-        
         inicializarComponentes();
-        cargarDatos();
+        cargarProyectos();
         configurarEventos();
-        
-        // Iniciar timer para actualizar notificaciones cada 2 segundos
-        iniciarTimerNotificaciones();
-    }
-    
-    private void iniciarTimerNotificaciones() {
-        timerNotificaciones = new javax.swing.Timer(2000, e -> {
-            int actualCount = controlador.obtenerCantidadNotificacionesNoLeidas();
-            if (actualCount != ultimasNotificacionesCount) {
-                ultimasNotificacionesCount = actualCount;
-                actualizarContadorNotificaciones(actualCount);
-                // Refrescar tabla de ayudantes por si hubo cambios
-                actualizarTabla();
-            }
-        });
-        timerNotificaciones.start();
+        setVisible(true);
     }
 
     private void inicializarComponentes() {
-        JPanel panelPrincipal = new JPanel(new BorderLayout());
+        JPanel panelPrincipal = new JPanel(new BorderLayout(0, 0));
         panelPrincipal.setBackground(COLOR_FONDO);
-        panelPrincipal.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
 
         // Header
-        JPanel header = new JPanel(new BorderLayout());
-        header.setBackground(COLOR_PRIMARIO);
-        header.setBorder(BorderFactory.createEmptyBorder(10, 14, 10, 14));
-        JLabel lblTitulo = new JLabel(" Jefa de Departamento");
+        JPanel header = crearHeaderMejorado();
+
+        // Tabs
+        tabs = new JTabbedPane();
+        tabs.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        tabs.setBackground(COLOR_FONDO);
+        
+        tabs.addTab("Vista General de Proyectos", crearPanelProyectos());
+        tabs.addTab("Detalle del Proyecto", crearPanelDetalle());
+
+        JPanel centro = new JPanel(new BorderLayout());
+        centro.setBackground(COLOR_FONDO);
+        centro.setBorder(BorderFactory.createEmptyBorder(20, 24, 20, 24));
+        centro.add(tabs, BorderLayout.CENTER);
+
+        panelPrincipal.add(header, BorderLayout.NORTH);
+        panelPrincipal.add(centro, BorderLayout.CENTER);
+
+        setContentPane(panelPrincipal);
+    }
+
+    private JPanel crearHeaderMejorado() {
+        JPanel header = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                                     RenderingHints.VALUE_ANTIALIAS_ON);
+                GradientPaint gradient = new GradientPaint(
+                    0, 0, ConstantesVisuales.COLOR_PRIMARIO,
+                    0, getHeight(), ConstantesVisuales.COLOR_PRIMARIO_HOVER
+                );
+                g2d.setPaint(gradient);
+                g2d.fillRect(0, 0, getWidth(), getHeight());
+            }
+        };
+        header.setPreferredSize(new Dimension(0, 70));
+        header.setBorder(BorderFactory.createEmptyBorder(12, 24, 12, 24));
+
+        // Panel izquierdo
+        JPanel panelIzq = new JPanel();
+        panelIzq.setOpaque(false);
+        panelIzq.setLayout(new BoxLayout(panelIzq, BoxLayout.Y_AXIS));
+        
+        JLabel lblTitulo = new JLabel("Panel de la Jefa de Departamento");
         lblTitulo.setForeground(Color.WHITE);
-        lblTitulo.setFont(new Font("Arial", Font.BOLD, 14));
-        lblTitulo.setIcon(IconManager.getInstance().getIcon("users.svg", 18));
-        header.add(lblTitulo, BorderLayout.WEST);
+        lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        
+        JLabel lblSubtitulo = new JLabel("Supervisión y Gestión de Proyectos de Investigación");
+        lblSubtitulo.setForeground(new Color(255, 255, 255, 180));
+        lblSubtitulo.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        
+        panelIzq.add(lblTitulo);
+        panelIzq.add(lblSubtitulo);
 
-        btnVerNotificaciones = new BadgeButton("Notificaciones", IconManager.getInstance().getIcon("bell.svg", 16));
-        btnVerNotificaciones.setForeground(Color.WHITE);
-        btnVerNotificaciones.setBackground(new Color(74, 144, 226));
-        btnVerNotificaciones.setBorderPainted(false);
-        btnVerNotificaciones.setFocusPainted(false);
-        btnVerNotificaciones.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        btnVerNotificaciones.setToolTipText("Ver notificaciones nuevas (Ctrl+N)");
-        JPanel headerRight = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        headerRight.setOpaque(false);
-        headerRight.add(btnVerNotificaciones);
-        header.add(headerRight, BorderLayout.EAST);
+        // Panel derecho
+        JPanel panelDer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 0));
+        panelDer.setOpaque(false);
 
-        // Filtros card (para ayudantes)
-        JPanel cardFiltros = new JPanel();
-        cardFiltros.setLayout(new BoxLayout(cardFiltros, BoxLayout.Y_AXIS));
-        cardFiltros.setBackground(COLOR_TARJETA);
-        cardFiltros.setBorder(BorderFactory.createCompoundBorder(
+        // Botón notificaciones con contador
+        JPanel contenedorNotif = new JPanel(new BorderLayout(0, 0));
+        contenedorNotif.setOpaque(false);
+        
+        btnNotificaciones = new StyledButton("Notificaciones", StyledButton.TipoBoton.SECUNDARIO);
+        btnNotificaciones.setPreferredSize(new Dimension(140, 40));
+        btnNotificaciones.setToolTipText("Ver notificaciones del sistema");
+        
+        lblContadorNotif = new JLabel("");
+        lblContadorNotif.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        lblContadorNotif.setForeground(Color.WHITE);
+        lblContadorNotif.setBackground(new Color(231, 76, 60));
+        lblContadorNotif.setOpaque(true);
+        lblContadorNotif.setHorizontalAlignment(SwingConstants.CENTER);
+        lblContadorNotif.setBorder(BorderFactory.createEmptyBorder(2, 6, 2, 6));
+        lblContadorNotif.setVisible(false);
+        
+        contenedorNotif.add(btnNotificaciones, BorderLayout.CENTER);
+        contenedorNotif.add(lblContadorNotif, BorderLayout.EAST);
+
+        btnReportes = new StyledButton("Generar Reportes", StyledButton.TipoBoton.EXITO);
+        btnReportes.setPreferredSize(new Dimension(160, 40));
+        btnReportes.setToolTipText("Generar reportes estadísticos");
+
+        panelDer.add(contenedorNotif);
+        panelDer.add(btnReportes);
+
+        header.add(panelIzq, BorderLayout.WEST);
+        header.add(panelDer, BorderLayout.EAST);
+        return header;
+    }
+
+    private JPanel crearPanelProyectos() {
+        JPanel panel = new JPanel(new BorderLayout(0, 16));
+        panel.setBackground(COLOR_FONDO);
+        panel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
+
+        // Título de sección
+        JLabel lblTitulo = new JLabel("PROYECTOS DE INVESTIGACIÓN ACTIVOS");
+        lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        lblTitulo.setForeground(new Color(100, 100, 100));
+        lblTitulo.setBorder(BorderFactory.createEmptyBorder(0, 0, 12, 0));
+
+        panelProyectos = new JPanel(new GridLayout(0, 1, 20, 20));
+        panelProyectos.setBackground(COLOR_FONDO);
+
+        JScrollPane scroll = new JScrollPane(panelProyectos);
+        scroll.setBorder(BorderFactory.createEmptyBorder());
+        scroll.getViewport().setBackground(COLOR_FONDO);
+        scroll.getVerticalScrollBar().setUnitIncrement(16);
+
+        JPanel contenedor = new JPanel(new BorderLayout());
+        contenedor.setBackground(COLOR_FONDO);
+        contenedor.add(lblTitulo, BorderLayout.NORTH);
+        contenedor.add(scroll, BorderLayout.CENTER);
+
+        panel.add(contenedor, BorderLayout.CENTER);
+        return panel;
+    }
+
+    private JPanel crearPanelDetalle() {
+        JPanel panel = new JPanel();
+        panel.setBackground(COLOR_FONDO);
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+
+        // Título de sección
+        JLabel lblTitulo = new JLabel("INFORMACIÓN DETALLADA DEL PROYECTO");
+        lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        lblTitulo.setForeground(new Color(100, 100, 100));
+        lblTitulo.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(lblTitulo);
+        panel.add(Box.createVerticalStrut(12));
+
+        // Card de información del proyecto
+        JPanel cardInfo = crearCardInformacion();
+        cardInfo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 220));
+        panel.add(cardInfo);
+        panel.add(Box.createVerticalStrut(20));
+
+        // Título de subsección
+        JLabel lblSubtitulo = new JLabel("COLABORADORES DEL PROYECTO");
+        lblSubtitulo.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        lblSubtitulo.setForeground(new Color(100, 100, 100));
+        lblSubtitulo.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(lblSubtitulo);
+        panel.add(Box.createVerticalStrut(12));
+
+        // Panel de tablas
+        JPanel panelTablas = crearPanelTablas();
+        panelTablas.setMaximumSize(new Dimension(Integer.MAX_VALUE, 400));
+        panel.add(panelTablas);
+
+        return panel;
+    }
+
+    private JPanel crearCardInformacion() {
+        JPanel card = new JPanel();
+        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+        card.setBackground(COLOR_TARJETA);
+        card.setBorder(BorderFactory.createCompoundBorder(
             new RoundedBorder(12, COLOR_BORDE, 1),
-            BorderFactory.createEmptyBorder(12, 12, 12, 12)
+            BorderFactory.createEmptyBorder(24, 28, 24, 28)
         ));
 
-        // Paneles de estadísticas
-        JPanel panelEstadisticas = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
-        panelEstadisticas.setBackground(COLOR_TARJETA);
-        panelEstadisticas.setBorder(BorderFactory.createEmptyBorder(8, 0, 8, 0));
-        
-        panelTotalAyudantes = new PanelEstadistica("Total Ayudantes", "0", new Color(52, 152, 219), "👥");
-        panelProyectosActivos = new PanelEstadistica("Proyectos Activos", "0", new Color(46, 204, 113), "📊");
-        panelCarrerasRegistradas = new PanelEstadistica("Carreras", "0", new Color(155, 89, 182), "🎓");
-        
-        panelEstadisticas.add(panelTotalAyudantes);
-        panelEstadisticas.add(panelProyectosActivos);
-        panelEstadisticas.add(panelCarrerasRegistradas);
-        cardFiltros.add(panelEstadisticas);
-        cardFiltros.add(Box.createVerticalStrut(8));
+        // Nombre del proyecto (destacado)
+        lblNombreProyecto = new JLabel("Seleccione un proyecto de la pestaña anterior");
+        lblNombreProyecto.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        lblNombreProyecto.setForeground(COLOR_PRIMARIO);
+        lblNombreProyecto.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JPanel filtrosRow = new JPanel(new GridLayout(2, 4, 10, 6));
-        filtrosRow.setOpaque(false);
+        // Panel de metadatos (2 columnas)
+        JPanel panelMeta = new JPanel(new GridLayout(2, 2, 20, 8));
+        panelMeta.setOpaque(false);
+        panelMeta.setMaximumSize(new Dimension(Integer.MAX_VALUE, 80));
 
-        comboProyectos = new JComboBox<>();
-        comboCarreras = new JComboBox<>();
-        comboNivel = new JComboBox<>();
-        comboEstado = new JComboBox<>();
-        
-        // Añadir "Todos" al nivel
-        comboNivel.addItem(0); // 0 representa "Todos"
-        for (int i = 1; i <= 10; i++) comboNivel.addItem(i);
-        
-        // Añadir estados
-        comboEstado.addItem("Todos");
-        comboEstado.addItem("Activos");
-        comboEstado.addItem("Inactivos");
+        lblTipoProyecto = crearLabelInfo("Tipo de proyecto: --");
+        lblDirector = crearLabelInfo("Director responsable: --");
+        lblFechas = crearLabelInfo("Periodo de ejecución: --");
+        lblEstadoProyecto = crearLabelInfo("Estado: --");
 
-        filtrosRow.add(new JLabel("Proyecto"));
-        filtrosRow.add(new JLabel("Carrera"));
-        filtrosRow.add(new JLabel("Nivel"));
-        filtrosRow.add(new JLabel("Estado"));
-        filtrosRow.add(comboProyectos);
-        filtrosRow.add(comboCarreras);
-        filtrosRow.add(comboNivel);
-        filtrosRow.add(comboEstado);
+        panelMeta.add(lblTipoProyecto);
+        panelMeta.add(lblDirector);
+        panelMeta.add(lblFechas);
+        panelMeta.add(lblEstadoProyecto);
 
-        JPanel filtrosAccion = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        filtrosAccion.setOpaque(false);
-        btnFiltrar = new StyledButton("Filtrar", StyledButton.TipoBoton.PRIMARIO);
-        btnFiltrar.setIcon(IconManager.getInstance().getIcon("filter.svg", 16));
-        btnFiltrar.setToolTipText("Aplicar filtros seleccionados (Ctrl+F)");
-        btnGenerarReporte = new StyledButton("Reporte", StyledButton.TipoBoton.EXITO);
-        btnGenerarReporte.setIcon(IconManager.getInstance().getIcon("report.svg", 16));
-        btnGenerarReporte.setToolTipText("Generar reporte general (Ctrl+R)");
-        filtrosAccion.add(btnFiltrar);
-        filtrosAccion.add(btnGenerarReporte);
+        // Separador
+        JSeparator sep = new JSeparator();
+        sep.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
+        sep.setForeground(COLOR_BORDE);
 
-        cardFiltros.add(filtrosRow);
-        cardFiltros.add(Box.createVerticalStrut(8));
-        cardFiltros.add(filtrosAccion);
+        // Panel de resumen de colaboradores
+        JPanel panelResumen = new JPanel(new GridLayout(1, 3, 16, 0));
+        panelResumen.setOpaque(false);
+        panelResumen.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
 
-        // Tabla de ayudantes
-        String[] columnas = {"Código", "Nombres", "Carrera", "Nivel", "IRA", "Proyecto", "Horas"};
-        modeloTabla = new AdvancedTableModel(columnas);
-        tablaAyudantes = new JTable(modeloTabla);
-        tablaAyudantes.setRowHeight(28);
-        
-        // Diseño alternado
-        tablaAyudantes.setDefaultRenderer(Object.class, new javax.swing.table.DefaultTableCellRenderer() {
+        lblAyudantesResumen = crearLabelResumen("Ayudantes: --");
+        lblAsistentesResumen = crearLabelResumen("Asistentes: --");
+        lblTecnicosResumen = crearLabelResumen("Técnicos: --");
+
+        panelResumen.add(lblAyudantesResumen);
+        panelResumen.add(lblAsistentesResumen);
+        panelResumen.add(lblTecnicosResumen);
+
+        card.add(lblNombreProyecto);
+        card.add(Box.createVerticalStrut(16));
+        card.add(panelMeta);
+        card.add(Box.createVerticalStrut(16));
+        card.add(sep);
+        card.add(Box.createVerticalStrut(16));
+        card.add(panelResumen);
+
+        return card;
+    }
+
+    private JLabel crearLabelInfo(String texto) {
+        JLabel lbl = new JLabel(texto);
+        lbl.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        lbl.setForeground(new Color(120, 120, 120));
+        return lbl;
+    }
+
+    private JLabel crearLabelResumen(String texto) {
+        JLabel lbl = new JLabel(texto);
+        lbl.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        lbl.setForeground(COLOR_TEXTO);
+        lbl.setHorizontalAlignment(SwingConstants.CENTER);
+        return lbl;
+    }
+
+    private JPanel crearPanelTablas() {
+        JPanel panel = new JPanel(new GridLayout(1, 3, 16, 0));
+        panel.setOpaque(false);
+
+        JPanel cardAyudantes = crearCardTabla("Ayudantes", crearTablaAyudantes());
+        JPanel cardAsistentes = crearCardTabla("Asistentes", crearTablaAsistentes());
+        JPanel cardTecnicos = crearCardTabla("Técnicos", crearTablaTecnicos());
+
+        panel.add(cardAyudantes);
+        panel.add(cardAsistentes);
+        panel.add(cardTecnicos);
+
+        return panel;
+    }
+
+    private JPanel crearCardTabla(String titulo, JTable tabla) {
+        JPanel card = new JPanel(new BorderLayout(0, 12));
+        card.setBackground(COLOR_TARJETA);
+        card.setBorder(BorderFactory.createCompoundBorder(
+            new RoundedBorder(12, COLOR_BORDE, 1),
+            BorderFactory.createEmptyBorder(16, 16, 16, 16)
+        ));
+
+        JLabel lblTitulo = new JLabel(titulo);
+        lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        lblTitulo.setForeground(COLOR_TEXTO);
+        card.add(lblTitulo, BorderLayout.NORTH);
+
+        JScrollPane scroll = new JScrollPane(tabla);
+        scroll.setBorder(BorderFactory.createLineBorder(COLOR_BORDE, 1));
+        card.add(scroll, BorderLayout.CENTER);
+
+        return card;
+    }
+
+    private JTable crearTablaAyudantes() {
+        String[] columnas = {"Código", "Nombre", "Carrera", "Nivel", "Horas", "Estado"};
+        modeloAyudantes = new AdvancedTableModel(columnas);
+        tablaAyudantes = new JTable(modeloAyudantes);
+        estilizarTabla(tablaAyudantes);
+        return tablaAyudantes;
+    }
+
+    private JTable crearTablaAsistentes() {
+        String[] columnas = {"Código", "Nombre", "Carrera", "Nivel", "Horas", "Estado"};
+        modeloAsistentes = new AdvancedTableModel(columnas);
+        tablaAsistentes = new JTable(modeloAsistentes);
+        estilizarTabla(tablaAsistentes);
+        return tablaAsistentes;
+    }
+
+    private JTable crearTablaTecnicos() {
+        String[] columnas = {"ID", "Nombre", "Correo", "Horas", "Estado"};
+        modeloTecnicos = new AdvancedTableModel(columnas);
+        tablaTecnicos = new JTable(modeloTecnicos);
+        estilizarTabla(tablaTecnicos);
+        return tablaTecnicos;
+    }
+
+    private void estilizarTabla(JTable tabla) {
+        tabla.setRowHeight(35);
+        tabla.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        tabla.setForeground(COLOR_TEXTO);
+        tabla.setSelectionBackground(new Color(52, 152, 219, 30));
+        tabla.setSelectionForeground(COLOR_TEXTO);
+        tabla.setGridColor(new Color(220, 220, 220));
+        tabla.setShowVerticalLines(false);
+
+        JTableHeader th = tabla.getTableHeader();
+        th.setBackground(COLOR_PRIMARIO);
+        th.setForeground(Color.WHITE);
+        th.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        th.setPreferredSize(new Dimension(0, 35));
+
+        // Filas alternadas
+        tabla.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
             @Override
-            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+            public Component getTableCellRendererComponent(JTable table, Object value,
+                    boolean isSelected, boolean hasFocus, int row, int column) {
+                Component c = super.getTableCellRendererComponent(table, value,
+                    isSelected, hasFocus, row, column);
+                
                 if (!isSelected) {
-                    c.setBackground(row % 2 == 0 ? new Color(240, 247, 255) : Color.WHITE);
+                    c.setBackground(row % 2 == 0 ? Color.WHITE : new Color(248, 250, 252));
                 }
+                
+                if (c instanceof JLabel) {
+                    ((JLabel) c).setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 8));
+                }
+                
                 return c;
             }
         });
-        
-        JTableHeader th = tablaAyudantes.getTableHeader();
-        th.setFont(new Font("Arial", Font.BOLD, 12));
-        
-        // Barra de búsqueda
-        JPanel panelBusqueda = new JPanel(new BorderLayout(8, 0));
-        panelBusqueda.setBackground(COLOR_FONDO);
-        JLabel lblBuscar = new JLabel("Buscar:");
-        lblBuscar.setFont(new Font("Arial", Font.PLAIN, 11));
-        campoBusqueda = new JTextField();
-        campoBusqueda.setPreferredSize(new Dimension(250, 35));
-        campoBusqueda.setFont(new Font("Arial", Font.PLAIN, 11));
-        campoBusqueda.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(COLOR_BORDE, 1),
-            BorderFactory.createEmptyBorder(5, 8, 5, 8)
-        ));
-        campoBusqueda.setToolTipText("Buscar por nombre, código o carrera");
-        panelBusqueda.add(lblBuscar, BorderLayout.WEST);
-        panelBusqueda.add(campoBusqueda, BorderLayout.CENTER);
-        
-        JScrollPane scroll = new JScrollPane(tablaAyudantes);
-        scroll.setBorder(BorderFactory.createCompoundBorder(
-            new RoundedBorder(10, COLOR_BORDE, 1),
-            BorderFactory.createEmptyBorder(4, 4, 4, 4)
-        ));
-
-        // Panel AYUDANTES (contenido de la pestaña)
-        JPanel panelAyudantes = new JPanel();
-        panelAyudantes.setBackground(COLOR_FONDO);
-        panelAyudantes.setLayout(new BoxLayout(panelAyudantes, BoxLayout.Y_AXIS));
-        panelAyudantes.add(cardFiltros);
-        panelAyudantes.add(Box.createVerticalStrut(12));
-        panelAyudantes.add(panelBusqueda);
-        panelAyudantes.add(Box.createVerticalStrut(8));
-        panelAyudantes.add(scroll);
-
-        // Panel PROYECTOS (nueva pestaña)
-        JPanel panelProyectosTab = new JPanel();
-        panelProyectosTab.setBackground(COLOR_FONDO);
-        panelProyectosTab.setLayout(new BoxLayout(panelProyectosTab, BoxLayout.Y_AXIS));
-
-        // Tabla de proyectos: columnas para planificados vs contratados activos
-        String[] columnasProy = {"Código", "Proyecto", "Planificados", "Contratados Activos", "Cupos Disponibles", "Estado", "Inicio", "Fin"};
-        modeloProyectos = new AdvancedTableModel(columnasProy);
-        tablaProyectos = new JTable(modeloProyectos);
-        tablaProyectos.setRowHeight(28);
-        JTableHeader thProy = tablaProyectos.getTableHeader();
-        thProy.setFont(new Font("Arial", Font.BOLD, 12));
-
-        JScrollPane scrollProy = new JScrollPane(tablaProyectos);
-        scrollProy.setBorder(BorderFactory.createCompoundBorder(
-            new RoundedBorder(10, COLOR_BORDE, 1),
-            BorderFactory.createEmptyBorder(4, 4, 4, 4)
-        ));
-
-        // Panel de resumen arriba de la tabla de proyectos
-        JPanel resumenProy = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
-        resumenProy.setBackground(COLOR_TARJETA);
-        resumenProy.setBorder(BorderFactory.createCompoundBorder(
-            new RoundedBorder(12, COLOR_BORDE, 1),
-            BorderFactory.createEmptyBorder(10, 12, 10, 12)
-        ));
-        JLabel lblResumen = new JLabel("Resumen de proyectos: planificados vs contratados activos");
-        lblResumen.setFont(new Font("Arial", Font.PLAIN, 12));
-        resumenProy.add(lblResumen);
-
-        panelProyectosTab.add(resumenProy);
-        panelProyectosTab.add(Box.createVerticalStrut(8));
-        panelProyectosTab.add(scrollProy);
-
-        // Contenedor con pestañas
-        JTabbedPane pestañas = new JTabbedPane();
-        pestañas.addTab("Ayudantes", IconManager.getInstance().getIcon("users.svg", 16), panelAyudantes);
-        pestañas.addTab("Proyectos", IconManager.getInstance().getIcon("project.svg", 16), panelProyectosTab);
-
-        panelPrincipal.add(header, BorderLayout.NORTH);
-        panelPrincipal.add(pestañas, BorderLayout.CENTER);
-
-        add(panelPrincipal);
     }
 
-    private void configurarEventos() {
-        // Atajos de teclado
-        configurarAtajosTeclado();
-        
-        // Búsqueda en vivo
-        campoBusqueda.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+    private void cargarProyectos() {
+        panelProyectos.removeAll();
+        List<Proyectos> proyectos = controlador.obtenerTodosProyectos();
+
+        if (proyectos.isEmpty()) {
+            JLabel lblVacio = new JLabel("No hay proyectos disponibles");
+            lblVacio.setFont(new Font("Segoe UI", Font.ITALIC, 14));
+            lblVacio.setForeground(new Color(150, 150, 150));
+            lblVacio.setHorizontalAlignment(SwingConstants.CENTER);
+            panelProyectos.add(lblVacio);
+        } else {
+            for (Proyectos p : proyectos) {
+                JPanel card = crearTarjetaProyecto(p);
+                panelProyectos.add(card);
+            }
+        }
+
+        panelProyectos.revalidate();
+        panelProyectos.repaint();
+
+        if (!proyectos.isEmpty()) {
+            seleccionarProyecto(proyectos.get(0));
+        }
+    }
+
+    private JPanel crearTarjetaProyecto(Proyectos p) {
+        JPanel card = new JPanel();
+        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+        card.setBackground(COLOR_TARJETA);
+        card.setBorder(BorderFactory.createCompoundBorder(
+            new RoundedBorder(12, COLOR_BORDE, 1),
+            BorderFactory.createEmptyBorder(20, 20, 20, 20)
+        ));
+        card.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        // Obtener datos
+        List<Ayudante> ayudantes = controlador.obtenerAyudantesProyecto(p.getCodigoProyecto());
+        long ayudantesActivos = ayudantes.stream().filter(Ayudante::esActivo).count();
+        List<AsistenteInvestigacion> asistentes = controlador.obtenerAsistentesProyecto(p.getCodigoProyecto());
+        List<TecnicoInvestigacion> tecnicos = controlador.obtenerTecnicosProyecto(p.getCodigoProyecto());
+
+        String directorNombre = p.getDirector() != null
+            ? p.getDirector().getNombresCompletos()
+            : "Sin asignar";
+
+        // Nombre del proyecto
+        JLabel lblNombre = new JLabel(p.getNombreProyecto());
+        lblNombre.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        lblNombre.setForeground(COLOR_PRIMARIO);
+        lblNombre.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        // Código del proyecto
+        JLabel lblCodigo = new JLabel("Código: " + p.getCodigoProyecto());
+        lblCodigo.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        lblCodigo.setForeground(new Color(150, 150, 150));
+        lblCodigo.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        // Metadata
+        JLabel lblTipo = new JLabel("Tipo: " + (p.getTipoProyecto() != null ? p.getTipoProyecto() : "N/A"));
+        lblTipo.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        lblTipo.setForeground(new Color(120, 120, 120));
+        lblTipo.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel lblDirector = new JLabel("Director: " + directorNombre);
+        lblDirector.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        lblDirector.setForeground(new Color(120, 120, 120));
+        lblDirector.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        // Separador
+        JSeparator sep = new JSeparator();
+        sep.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
+        sep.setForeground(COLOR_BORDE);
+
+        // Panel de estadísticas
+        JPanel panelStats = new JPanel(new GridLayout(3, 1, 0, 6));
+        panelStats.setOpaque(false);
+        panelStats.setMaximumSize(new Dimension(Integer.MAX_VALUE, 80));
+
+        JLabel lblAyudantes = crearLabelStat("Ayudantes:", ayudantesActivos, p.getAyudantesPlanificados());
+        JLabel lblAsistentes = crearLabelStat("Asistentes:", asistentes.size(), p.getAsistentesPlanificados());
+        JLabel lblTecnicos = crearLabelStat("Técnicos:", tecnicos.size(), p.getTecnicosPlanificados());
+
+        panelStats.add(lblAyudantes);
+        panelStats.add(lblAsistentes);
+        panelStats.add(lblTecnicos);
+
+        card.add(lblNombre);
+        card.add(Box.createVerticalStrut(2));
+        card.add(lblCodigo);
+        card.add(Box.createVerticalStrut(12));
+        card.add(lblTipo);
+        card.add(lblDirector);
+        card.add(Box.createVerticalStrut(12));
+        card.add(sep);
+        card.add(Box.createVerticalStrut(12));
+        card.add(panelStats);
+
+        // Efecto hover y click
+        card.addMouseListener(new MouseAdapter() {
             @Override
-            public void insertUpdate(javax.swing.event.DocumentEvent e) { actualizarBusqueda(); }
-            @Override
-            public void removeUpdate(javax.swing.event.DocumentEvent e) { actualizarBusqueda(); }
-            @Override
-            public void changedUpdate(javax.swing.event.DocumentEvent e) { }
-        });
-        
-        // Ordenamiento por columna
-        tablaAyudantes.getTableHeader().addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseClicked(java.awt.event.MouseEvent e) {
-                int columna = tablaAyudantes.columnAtPoint(e.getPoint());
-                if (columna >= 0) {
-                    modeloTabla.ordenarPorColumna(columna);
+            public void mouseEntered(MouseEvent e) {
+                if (card != tarjetaSeleccionada) {
+                    card.setBackground(new Color(248, 250, 252));
                 }
             }
-        });
 
-        btnFiltrar.addActionListener(e -> {
-            ToastMessage.mostrar(this, "Aplicando filtros...", ToastMessage.TipoToast.INFO);
-            Map<String, Object> filtros = obtenerFiltrosSeleccionados();
-            List<Ayudante> filtrados = controlador.filtrarAyudantes(filtros);
-            modeloTabla.limpiar();
-            java.util.List<Object[]> filas = new java.util.ArrayList<>();
-            for (Ayudante a : filtrados) {
-                Object[] fila = {
-                    a.getCodigoUnico(),
-                    a.getNombresCompletos(),
-                    a.getCarrera(),
-                    a.getNivel(),
-                    String.format("%.2f", a.getIRA()),
-                    a.getProyectoAsignado() != null ? a.getProyectoAsignado().getNombreProyecto() : "N/A",
-                    a.getHorasSemanales()
-                };
-                filas.add(fila);
+            @Override
+            public void mouseExited(MouseEvent e) {
+                if (card != tarjetaSeleccionada) {
+                    card.setBackground(COLOR_TARJETA);
+                }
             }
-            modeloTabla.establecerDatos(filas);
-            campoBusqueda.setText("");
-            ToastMessage.mostrar(this, filtrados.size() + " ayudante(s) encontrado(s)", ToastMessage.TipoToast.EXITO);
-        });
 
-        btnGenerarReporte.addActionListener(e -> {
-            // Preparar datos para el diálogo
-            String[] proyectos = obtenerNombresProyectos().toArray(new String[0]);
-            String[] carreras = new String[]{"Computacion", "Software"}; 
-            String[] niveles = new String[]{"1", "2", "3", "4", "5", "6", "7", "8", "9", "10"};
-            
-            DialogoGenerarReporte dialogo = new DialogoGenerarReporte(this, proyectos, carreras, niveles);
-            dialogo.setVisible(true);
-            
-            if (!dialogo.seGenero()) return;
-            
-            ToastMessage.mostrar(this, "Generando reporte...", ToastMessage.TipoToast.INFO);
-            var reporte = controlador.generarReporteGeneral();
-            if (reporte != null) {
-                ToastMessage.mostrar(this, "Reporte generado exitosamente", ToastMessage.TipoToast.EXITO);
-                ofrecerExportacion(reporte);
-            } else {
-                ToastMessage.mostrar(this, "Error al generar reporte", ToastMessage.TipoToast.ERROR);
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                seleccionarTarjetaVisual(card);
+                seleccionarProyecto(p);
+                tabs.setSelectedIndex(1);
             }
         });
 
-        btnVerNotificaciones.addActionListener(e -> {
-            List<Notificacion> notas = controlador.obtenerNotificaciones();
-            DialogoNotificaciones dialogo = new DialogoNotificaciones(this, notas);
-            dialogo.onMarcarLeidasListener(() -> {
-                controlador.marcarNotificacionesComoLeidas();
-                actualizarContadorNotificaciones(controlador.obtenerCantidadNotificacionesNoLeidas());
-                ToastMessage.mostrar(this, "Notificaciones marcadas como leídas", ToastMessage.TipoToast.EXITO);
-            });
-            dialogo.setVisible(true);
-        });
-    }
-    
-    private void configurarAtajosTeclado() {
-        // Ctrl+F - Filtrar
-        getRootPane().registerKeyboardAction(
-            e -> btnFiltrar.doClick(),
-            KeyStroke.getKeyStroke(KeyEvent.VK_F, java.awt.event.InputEvent.CTRL_DOWN_MASK),
-            JComponent.WHEN_IN_FOCUSED_WINDOW
-        );
-        
-        // Ctrl+R - Generar reporte
-        getRootPane().registerKeyboardAction(
-            e -> btnGenerarReporte.doClick(),
-            KeyStroke.getKeyStroke(KeyEvent.VK_R, java.awt.event.InputEvent.CTRL_DOWN_MASK),
-            JComponent.WHEN_IN_FOCUSED_WINDOW
-        );
-        
-        // Ctrl+N - Notificaciones
-        getRootPane().registerKeyboardAction(
-            e -> btnVerNotificaciones.doClick(),
-            KeyStroke.getKeyStroke(KeyEvent.VK_N, java.awt.event.InputEvent.CTRL_DOWN_MASK),
-            JComponent.WHEN_IN_FOCUSED_WINDOW
-        );
-        
-        // F5 - Refrescar
-        getRootPane().registerKeyboardAction(
-            e -> refrescar(),
-            KeyStroke.getKeyStroke(KeyEvent.VK_F5, 0),
-            JComponent.WHEN_IN_FOCUSED_WINDOW
-        );
+        return card;
     }
 
-    private void cargarDatos() {
-        // Cargar proyectos (desde BD)
-        comboProyectos.removeAllItems();
-        comboProyectos.addItem("Todos");
-        List<ProyectoInvestigacion> proyectos = controlador.obtenerTodosProyectos();
-        for (ProyectoInvestigacion p : proyectos) {
-            comboProyectos.addItem(new ProyectoItem(p.getCodigoProyecto(), p.getNombreProyecto()));
-        }
-        panelProyectosActivos.actualizarValor(String.valueOf(proyectos.size()));
+    private JLabel crearLabelStat(String label, long actual, int total) {
+        String texto = label + " " + actual + " / " + total;
+        JLabel lbl = new JLabel(texto);
+        lbl.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        lbl.setForeground(COLOR_TEXTO);
         
-        // Cargar carreras (desde BD)
-        comboCarreras.removeAllItems();
-        comboCarreras.addItem("Todas");
-        java.util.Set<String> carrerasUnicas = new java.util.TreeSet<>();
-        for (Ayudante a : controlador.obtenerTodosAyudantes()) {
-            if (a.getCarrera() != null && !a.getCarrera().isBlank()) {
-                carrerasUnicas.add(a.getCarrera());
-            }
-        }
-        for (String c : carrerasUnicas) comboCarreras.addItem(c);
-        panelCarrerasRegistradas.actualizarValor(String.valueOf(carrerasUnicas.size()));
-        
-        // Actualizar tablas
-        actualizarTabla();
-        actualizarTablaProyectos();
-    }
-
-    private void actualizarBusqueda() {
-        String textoBusqueda = campoBusqueda.getText();
-        if (textoBusqueda.isEmpty()) {
-            cargarDatos();
+        // Colorear según disponibilidad
+        if (actual < total) {
+            lbl.setForeground(new Color(46, 204, 113)); // Verde
+        } else if (actual == total) {
+            lbl.setForeground(new Color(243, 156, 18)); // Amarillo
         } else {
-            modeloTabla.buscarEnColumna(textoBusqueda, 1); // Buscar en columna Nombres
+            lbl.setForeground(new Color(231, 76, 60)); // Rojo
         }
+        
+        return lbl;
     }
 
-    private void actualizarTabla() {
-        modeloTabla.limpiar();
+    private void seleccionarTarjetaVisual(JPanel card) {
+        if (tarjetaSeleccionada != null) {
+            tarjetaSeleccionada.setBorder(BorderFactory.createCompoundBorder(
+                new RoundedBorder(12, COLOR_BORDE, 1),
+                BorderFactory.createEmptyBorder(20, 20, 20, 20)
+            ));
+            tarjetaSeleccionada.setBackground(COLOR_TARJETA);
+        }
         
-        List<Ayudante> ayudantes = controlador.obtenerTodosAyudantes();
-        panelTotalAyudantes.actualizarValor(String.valueOf(ayudantes.size()));
-        
+        tarjetaSeleccionada = card;
+        tarjetaSeleccionada.setBorder(BorderFactory.createCompoundBorder(
+            new RoundedBorder(12, COLOR_PRIMARIO, 3),
+            BorderFactory.createEmptyBorder(18, 18, 18, 18)
+        ));
+        tarjetaSeleccionada.setBackground(new Color(230, 240, 255));
+    }
+
+    private void seleccionarProyecto(Proyectos p) {
+        this.proyectoSeleccionado = p;
+
+        if (p == null) return;
+
+        List<Ayudante> ayudantes = controlador.obtenerAyudantesProyecto(p.getCodigoProyecto());
+        List<AsistenteInvestigacion> asistentes = controlador.obtenerAsistentesProyecto(p.getCodigoProyecto());
+        List<TecnicoInvestigacion> tecnicos = controlador.obtenerTecnicosProyecto(p.getCodigoProyecto());
+
+        long ayudantesActivos = ayudantes.stream().filter(Ayudante::esActivo).count();
+
+        String directorNombre = p.getDirector() != null
+            ? p.getDirector().getNombresCompletos()
+            : "Sin asignar";
+
+        lblNombreProyecto.setText(p.getNombreProyecto());
+        lblTipoProyecto.setText("Tipo de proyecto: " + (p.getTipoProyecto() != null ? p.getTipoProyecto() : "N/A"));
+        lblDirector.setText("Director responsable: " + directorNombre);
+        lblFechas.setText("Periodo de ejecución: " + formatearFecha(p.getFechaInicio()) + " - " + formatearFecha(p.getFechaFin()));
+        lblEstadoProyecto.setText("Estado: " + (p.getEstado() != null ? p.getEstado() : "Activo"));
+
+        lblAyudantesResumen.setText("Ayudantes: " + ayudantesActivos + " / " + p.getAyudantesPlanificados());
+        lblAsistentesResumen.setText("Asistentes: " + asistentes.size() + " / " + p.getAsistentesPlanificados());
+        lblTecnicosResumen.setText("Técnicos: " + tecnicos.size() + " / " + p.getTecnicosPlanificados());
+
+        cargarTablaAyudantes(ayudantes);
+        cargarTablaAsistentes(asistentes);
+        cargarTablaTecnicos(tecnicos);
+    }
+
+    private void cargarTablaAyudantes(List<Ayudante> ayudantes) {
+        modeloAyudantes.limpiar();
         java.util.List<Object[]> filas = new java.util.ArrayList<>();
         for (Ayudante a : ayudantes) {
             Object[] fila = {
@@ -440,97 +608,173 @@ public class VistaJefaDepartamento extends JFrame {
                 a.getNombresCompletos(),
                 a.getCarrera(),
                 a.getNivel(),
-                String.format("%.2f", a.getIRA()),
-                a.getProyectoAsignado() != null ? a.getProyectoAsignado().getNombreProyecto() : "N/A",
-                a.getHorasSemanales()
+                a.getHorasSemanales(),
+                a.esActivo() ? "Activo" : "Inactivo"
             };
             filas.add(fila);
         }
-        modeloTabla.establecerDatos(filas);
-        campoBusqueda.setText("");
+        modeloAyudantes.establecerDatos(filas);
     }
 
-    private void actualizarTablaProyectos() {
-        modeloProyectos.limpiar();
-        java.util.List<Object[]> filas = controlador.obtenerResumenProyectos();
-        modeloProyectos.establecerDatos(filas);
-    }
-
-    public void mostrarVentana() {
-        setVisible(true);
-    }
-
-    public void cerrar() {
-        if (timerNotificaciones != null) {
-            timerNotificaciones.stop();
+    private void cargarTablaAsistentes(List<AsistenteInvestigacion> asistentes) {
+        modeloAsistentes.limpiar();
+        java.util.List<Object[]> filas = new java.util.ArrayList<>();
+        for (AsistenteInvestigacion a : asistentes) {
+            Object[] fila = {
+                a.getCodigoUnico(),
+                a.getNombresCompletos(),
+                a.getCarrera(),
+                a.getNivel(),
+                a.getHorasSemanales(),
+                a.esActivo() ? "Activo" : "Inactivo"
+            };
+            filas.add(fila);
         }
-        setVisible(false);
+        modeloAsistentes.establecerDatos(filas);
     }
 
-    public Map<String, Object> obtenerFiltrosSeleccionados() {
-        Object itemProyecto = comboProyectos.getSelectedItem();
-        String carrera = comboCarreras.getSelectedItem() != null ? comboCarreras.getSelectedItem().toString() : "Todas";
-        Integer nivel = comboNivel.getSelectedItem() != null ? (Integer) comboNivel.getSelectedItem() : 0;
-        String estado = comboEstado.getSelectedItem() != null ? comboEstado.getSelectedItem().toString() : "Todos";
-
-        var builder = new java.util.HashMap<String, Object>();
-        if (itemProyecto != null && !(itemProyecto instanceof String)) {
-            ProyectoItem pi = (ProyectoItem) itemProyecto;
-            builder.put("proyecto", pi.getCodigo());
+    private void cargarTablaTecnicos(List<TecnicoInvestigacion> tecnicos) {
+        modeloTecnicos.limpiar();
+        java.util.List<Object[]> filas = new java.util.ArrayList<>();
+        for (TecnicoInvestigacion t : tecnicos) {
+            Object[] fila = {
+                t.getIdTecnico(),
+                t.getNombres() + " " + t.getApellidos(),
+                t.getCorreoElectronico(),
+                t.getHorasSemanales(),
+                t.getEstado()
+            };
+            filas.add(fila);
         }
-        if (!"Todas".equalsIgnoreCase(carrera)) builder.put("carrera", carrera);
-        if (nivel != 0) builder.put("nivel", nivel);
-        if (!"Todos".equalsIgnoreCase(estado)) builder.put("estado", estado);
-        return builder;
+        modeloTecnicos.establecerDatos(filas);
     }
 
-    private java.util.List<String> obtenerNombresProyectos() {
-        var nombres = new java.util.ArrayList<String>();
-        List<ProyectoInvestigacion> proyectos = controlador.obtenerTodosProyectos();
-        for (ProyectoInvestigacion p : proyectos) {
+    private String formatearFecha(java.util.Date fecha) {
+        if (fecha == null) return "N/A";
+        return formatoFecha.format(fecha);
+    }
+
+    private void configurarEventos() {
+        btnNotificaciones.addActionListener(e -> abrirNotificaciones());
+        btnReportes.addActionListener(e -> abrirDialogoReportes());
+        
+        actualizarBadgeNotificaciones();
+    }
+
+    private void actualizarBadgeNotificaciones() {
+        int cantidadNoLeidas = controlador.obtenerCantidadNotificacionesNoLeidas();
+        if (cantidadNoLeidas > 0) {
+            lblContadorNotif.setText(String.valueOf(cantidadNoLeidas));
+            lblContadorNotif.setVisible(true);
+        } else {
+            lblContadorNotif.setVisible(false);
+        }
+    }
+
+    private void abrirNotificaciones() {
+        List<Notificacion> notas = controlador.obtenerNotificaciones();
+        DialogoNotificaciones dialogo = new DialogoNotificaciones(this, notas);
+        dialogo.onMarcarLeidasListener(() -> {
+            controlador.marcarNotificacionesComoLeidas();
+            ToastMessage.mostrar(this, "Notificaciones marcadas como leídas", ToastMessage.TipoToast.EXITO);
+            actualizarBadgeNotificaciones();
+        });
+        dialogo.setVisible(true);
+        actualizarBadgeNotificaciones();
+    }
+
+    private void abrirDialogoReportes() {
+        String[] proyectos = obtenerNombresProyectos().toArray(new String[0]);
+        String[] carreras = obtenerCarreras().toArray(new String[0]);
+        String[] niveles = obtenerNiveles();
+
+        DialogoGenerarReporte dialogo = new DialogoGenerarReporte(this, proyectos, carreras, niveles);
+        dialogo.setVisible(true);
+
+        if (!dialogo.seGenero()) return;
+
+        Reporte reporte = generarReporte(dialogo.getTipoReporte(), dialogo.getFiltroSeleccionado());
+        if (reporte == null) {
+            ToastMessage.mostrar(this, "Error al generar reporte", ToastMessage.TipoToast.ERROR);
+            return;
+        }
+
+        exportarReporte(reporte);
+    }
+
+    private Reporte generarReporte(String tipo, String filtro) {
+        if ("General".equals(tipo)) {
+            return controlador.generarReporteGeneral();
+        }
+        if ("Por Proyecto".equals(tipo)) {
+            Proyectos proyecto = buscarProyectoPorNombre(filtro);
+            return proyecto != null ? controlador.generarReportePorProyecto(proyecto.getCodigoProyecto()) : null;
+        }
+        if ("Por Carrera".equals(tipo)) {
+            return controlador.generarReportePorCarrera(filtro);
+        }
+        if ("Por Nivel".equals(tipo)) {
+            try {
+                int nivel = Integer.parseInt(filtro);
+                return controlador.generarReportePorNivel(nivel);
+            } catch (NumberFormatException ex) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    private void exportarReporte(Reporte reporte) {
+        int opcion = JOptionPane.showConfirmDialog(this,
+            "¿Desea exportar el reporte a PDF?",
+            "Exportar Reporte",
+            JOptionPane.YES_NO_OPTION);
+
+        if (opcion != JOptionPane.YES_OPTION) return;
+
+        JFileChooser chooser = new JFileChooser();
+        chooser.setSelectedFile(new File("reporte_" + System.currentTimeMillis() + ".pdf"));
+        if (chooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+            boolean exito = controlador.exportarReportePDF(reporte, chooser.getSelectedFile().getAbsolutePath());
+            if (exito) {
+                ToastMessage.mostrar(this, "Reporte exportado exitosamente", ToastMessage.TipoToast.EXITO);
+            } else {
+                ToastMessage.mostrar(this, "Error al exportar reporte", ToastMessage.TipoToast.ERROR);
+            }
+        }
+    }
+
+    private List<String> obtenerNombresProyectos() {
+        List<String> nombres = new ArrayList<>();
+        for (Proyectos p : controlador.obtenerTodosProyectos()) {
             nombres.add(p.getNombreProyecto());
         }
         return nombres;
     }
 
-    public void mostrarMensajeExito(String mensaje) {
-        JOptionPane.showMessageDialog(this, mensaje, "Éxito", JOptionPane.INFORMATION_MESSAGE);
-    }
-
-    public void mostrarMensajeError(String mensaje) {
-        JOptionPane.showMessageDialog(this, mensaje, "Error", JOptionPane.ERROR_MESSAGE);
-    }
-
-    public void actualizarContadorNotificaciones(int cantidad) {
-        btnVerNotificaciones.setCount(cantidad);
-    }
-
-    public void refrescar() {
-        cargarDatos();
-        actualizarContadorNotificaciones(controlador.obtenerCantidadNotificacionesNoLeidas());
-    }
-
-    public void setControlador(ControladorJefaDepartamento controlador) {
-        this.controlador = controlador;
-    }
-
-    private void ofrecerExportacion(Reporte reporte) {
-        int opcion = JOptionPane.showConfirmDialog(this,
-            "¿Desea exportar el reporte a PDF?",
-            "Exportar Reporte",
-            JOptionPane.YES_NO_OPTION);
-        
-        if (opcion == JOptionPane.YES_OPTION) {
-            JFileChooser chooser = new JFileChooser();
-            chooser.setSelectedFile(new java.io.File("reporte_" + System.currentTimeMillis() + ".pdf"));
-            if (chooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
-                boolean exito = controlador.exportarReportePDF(reporte, chooser.getSelectedFile().getAbsolutePath());
-                if (exito) {
-                    mostrarMensajeExito("Reporte exportado a PDF: " + chooser.getSelectedFile().getAbsolutePath());
-                } else {
-                    mostrarMensajeError("Error al exportar reporte a PDF");
-                }
+    private List<String> obtenerCarreras() {
+        Set<String> carreras = new TreeSet<>();
+        for (Ayudante a : controlador.obtenerTodosAyudantes()) {
+            if (a.getCarrera() != null && !a.getCarrera().isBlank()) {
+                carreras.add(a.getCarrera());
             }
         }
+        if (carreras.isEmpty()) {
+            carreras.add("Sin datos");
+        }
+        return new ArrayList<>(carreras);
+    }
+
+    private String[] obtenerNiveles() {
+        return new String[] {"1","2","3","4","5","6","7","8","9","10"};
+    }
+
+    private Proyectos buscarProyectoPorNombre(String nombre) {
+        for (Proyectos p : controlador.obtenerTodosProyectos()) {
+            if (p.getNombreProyecto().equalsIgnoreCase(nombre)) {
+                return p;
+            }
+        }
+        return null;
     }
 }

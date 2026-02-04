@@ -2,6 +2,7 @@ package model;
 
 /**
  * Representa un estudiante de la FIS-EPN
+ * RESPONSABILIDAD ÚNICA: Mantener datos y lógica específica de estudiante
  */
 public class Estudiante extends MiembroEPN {
     private String carrera;
@@ -9,6 +10,10 @@ public class Estudiante extends MiembroEPN {
     private int nivel;
 
     public Estudiante() {
+        super();
+        this.password = "N/A";
+        this.rol = "ESTUDIANTE";
+        this.estado = "ACTIVO";
     }
 
     public Estudiante(String codigoUnico, String cedula, String correoInstitucional,
@@ -23,41 +28,81 @@ public class Estudiante extends MiembroEPN {
     /**
      * Valida si un estudiante es elegible para ser ayudante
      * Requisitos: IRA >= 24, Nivel >= 3
+     * 
+     * NOTA: Esta clase SOLO determina elegibilidad.
+     * La conversión actual se delega a ServicioConversionAyudante
      */
     public boolean esElegibleParaAyudantia() {
         return ira >= 24.0f && nivel >= 3;
     }
 
     /**
-     * Convierte un estudiante elegible a ayudante
+     * Valida si puede convertirse a ayudante con parámetros específicos
      */
-    public Ayudante convertirAAyudante(ProyectoInvestigacion proyecto, int horas, double salario) {
+    public ResultadoOperacion validarConversionAyudante(int horas, int meses) {
+        ResultadoOperacion resultado = new ResultadoOperacion();
+
+        // Validar elegibilidad básica
         if (!esElegibleParaAyudantia()) {
-            return null;
+            resultado.setMensaje("Estudiante no elegible: IRA >= 24 y Nivel >= 3 requeridos");
+            resultado.agregarError("IRA actual: " + ira + ", Nivel actual: " + nivel);
+            return resultado;
         }
 
-        Ayudante ayudante = new Ayudante();
-        ayudante.setCodigoUnico(this.codigoUnico);
-        ayudante.setCedula(this.cedula);
-        ayudante.setCorreoInstitucional(this.correoInstitucional);
-        ayudante.setPassword(this.password);
-        ayudante.setNombres(this.nombres);
-        ayudante.setApellidos(this.apellidos);
-        ayudante.setTelefono(this.telefono);
-        ayudante.setRol("AYUDANTE");
-        ayudante.setEstado("ACTIVO");
-        ayudante.setCarrera(this.carrera);
-        ayudante.setNivel(this.nivel);
-        ayudante.setIRA(this.ira);
-        ayudante.setHorasSemanales(horas);
-        ayudante.setSalarioMensual(salario);
-        ayudante.setProyectoAsignado(proyecto);
-        ayudante.setFechaRegistro(new java.util.Date());
-        //agregar mes por hora y salario
-        return ayudante;
+        // Validar horas
+        if (horas <= 0 || horas > 32) {
+            resultado.setMensaje("Las horas semanales deben estar entre 1 y 32");
+            resultado.agregarError("Horas inválidas: " + horas);
+            return resultado;
+        }
+
+        // Validar meses
+        if (meses <= 0 || meses > 12) {
+            resultado.setMensaje("Los meses deben estar entre 1 y 12");
+            resultado.agregarError("Meses inválidos: " + meses);
+            return resultado;
+        }
+
+        resultado.setExitoso(true);
+        resultado.setMensaje("Validación exitosa");
+        return resultado;
     }
 
-    // Getters y Setters
+    /**
+     * Valida si puede convertirse a asistente
+     */
+    public ResultadoOperacion validarConversionAsistente(int horas, int meses) {
+        ResultadoOperacion resultado = new ResultadoOperacion();
+
+        // Validar horas
+        if (horas <= 0 || horas > 40) {
+            resultado.setMensaje("Las horas semanales deben estar entre 1 y 40");
+            resultado.agregarError("Horas inválidas: " + horas);
+            return resultado;
+        }
+
+        // Validar meses
+        if (meses <= 0 || meses > 12) {
+            resultado.setMensaje("Los meses deben estar entre 1 y 12");
+            resultado.agregarError("Meses inválidos: " + meses);
+            return resultado;
+        }
+
+        resultado.setExitoso(true);
+        resultado.setMensaje("Validación exitosa");
+        return resultado;
+    }
+
+    /**
+     * Obtiene el nombre completo del estudiante
+     */
+    @Override
+    public String getNombresCompletos() {
+        return super.getNombresCompletos();
+    }
+
+    // ============ GETTERS Y SETTERS ============
+    
     public String getCarrera() {
         return carrera;
     }
@@ -80,5 +125,84 @@ public class Estudiante extends MiembroEPN {
 
     public void setNivel(int nivel) {
         this.nivel = nivel;
+    }
+
+    /**
+     * Validación básica de estudiante
+     */
+    public boolean esValido() {
+        return getCodigoUnico() != null && !getCodigoUnico().isEmpty() &&
+               ira >= 0 && ira <= 20 &&
+               nivel >= 1 && nivel <= 10 &&
+               carrera != null && !carrera.isEmpty();
+    }
+
+    // ============ MÉTODOS DE CONVERSIÓN ============
+
+    /**
+     * Convierte este estudiante a Ayudante
+     */
+    public Ayudante convertirAAyudante(Proyectos proyecto, int horas, int meses) {
+        Ayudante ayudante = new Ayudante();
+        String passwordBase = getPassword();
+        if (passwordBase == null || passwordBase.trim().isEmpty()) {
+            passwordBase = "N/A";
+        }
+        
+        // Copiar datos comunes
+        ayudante.setCodigoUnico(getCodigoUnico());
+        ayudante.setCedula(getCedula());
+        ayudante.setCorreoInstitucional(getCorreoInstitucional());
+        ayudante.setPassword(passwordBase);
+        ayudante.setNombres(getNombres());
+        ayudante.setApellidos(getApellidos());
+        ayudante.setTelefono(getTelefono());
+        ayudante.setRol("AYUDANTE");
+        ayudante.setEstado("ACTIVO");
+        
+        // Copiar datos académicos
+        ayudante.setCarrera(this.carrera);
+        ayudante.setNivel(this.nivel);
+        ayudante.setIRA(this.ira);
+        
+        // Asignar datos de ayudante
+        ayudante.setHorasSemanales(horas);
+        ayudante.setMesesContratados(meses);
+        ayudante.setProyectoAsignado(proyecto);
+        ayudante.setFechaRegistro(new java.util.Date());
+        
+        return ayudante;
+    }
+
+    /**
+     * Convierte este estudiante a AsistenteInvestigacion
+     */
+    public AsistenteInvestigacion convertirAAsistente(Proyectos proyecto, int horas, int meses) {
+        AsistenteInvestigacion asistente = new AsistenteInvestigacion();
+        String passwordBase = getPassword();
+        if (passwordBase == null || passwordBase.trim().isEmpty()) {
+            passwordBase = "N/A";
+        }
+
+        // Copiar datos comunes
+        asistente.setCodigoUnico(getCodigoUnico());
+        asistente.setCedula(getCedula());
+        asistente.setCorreoInstitucional(getCorreoInstitucional());
+        asistente.setPassword(passwordBase);
+        asistente.setNombres(getNombres());
+        asistente.setApellidos(getApellidos());
+        asistente.setTelefono(getTelefono());
+        asistente.setCarrera(this.carrera);
+        asistente.setNivel(this.nivel);
+        asistente.setIRA(this.ira);
+
+        // Datos específicos de asistente
+        asistente.setHorasSemanales(horas);
+        asistente.setMesesContratados(meses);
+        asistente.setEstado("ACTIVO");
+        asistente.setFechaRegistro(new java.util.Date());
+        asistente.setProyectoAsignado(proyecto);
+
+        return asistente;
     }
 }

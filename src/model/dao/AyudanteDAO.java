@@ -7,6 +7,7 @@ import java.util.List;
 
 /**
  * DAO para operaciones CRUD de Ayudante
+ * CORREGIDO: NO modifica el rol en miembros_epn
  */
 public class AyudanteDAO implements IDAO<Ayudante> {
     private Connection conexion;
@@ -17,10 +18,13 @@ public class AyudanteDAO implements IDAO<Ayudante> {
 
     @Override
     public boolean guardar(Ayudante ayudante) {
+        // CORREGIDO: NO actualizar rol en miembros_epn
+        // El estudiante sigue siendo ESTUDIANTE incluso cuando es ayudante
+        
         String sql = "INSERT INTO ayudantes (codigo_unico, cedula, correo_institucional, " +
-                     "nombres, apellidos, telefono, carrera, nivel, ira, horas_semanales, salario_mensual, " +
-                     "fecha_registro, codigo_proyecto) " +
-                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                     "nombres, apellidos, telefono, carrera, nivel, ira, horas_semanales, meses_contratados, " +
+                     "estado, fecha_registro, codigo_proyecto) " +
+                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
         try (PreparedStatement ps = conexion.prepareStatement(sql)) {
             ps.setString(1, ayudante.getCodigoUnico());
@@ -33,14 +37,21 @@ public class AyudanteDAO implements IDAO<Ayudante> {
             ps.setInt(8, ayudante.getNivel());
             ps.setFloat(9, ayudante.getIRA());
             ps.setInt(10, ayudante.getHorasSemanales());
-            ps.setDouble(11, ayudante.getSalarioMensual());
-            ps.setTimestamp(12, new Timestamp(ayudante.getFechaRegistro().getTime()));
-            ps.setString(13, ayudante.getProyectoAsignado() != null ? 
+            ps.setInt(11, ayudante.getMesesContratados());
+            ps.setString(12, ayudante.getEstado() != null ? ayudante.getEstado() : "ACTIVO");
+            ps.setTimestamp(13, new Timestamp(ayudante.getFechaRegistro().getTime()));
+            ps.setString(14, ayudante.getProyectoAsignado() != null ? 
                         ayudante.getProyectoAsignado().getCodigoProyecto() : null);
             
-            return ps.executeUpdate() > 0;
+            int rowsAffected = ps.executeUpdate();
+            if (rowsAffected > 0) {
+                System.out.println("✓ Ayudante guardado en tabla AYUDANTES: " + ayudante.getCodigoUnico());
+                return true;
+            }
+            return false;
         } catch (SQLException e) {
-            System.out.println("Error al guardar ayudante: " + e.getMessage());
+            System.out.println("✗ Error al guardar ayudante: " + e.getMessage());
+            e.printStackTrace();
             return false;
         }
     }
@@ -150,7 +161,7 @@ public class AyudanteDAO implements IDAO<Ayudante> {
     public boolean actualizar(Ayudante ayudante) {
         String sql = "UPDATE ayudantes SET cedula = ?, correo_institucional = ?, " +
                      "nombres = ?, apellidos = ?, telefono = ?, carrera = ?, nivel = ?, ira = ?, " +
-                     "horas_semanales = ?, salario_mensual = ?, estado = ?, fecha_finalizacion = ?, " +
+                     "horas_semanales = ?, meses_contratados = ?, estado = ?, fecha_finalizacion = ?, " +
                      "motivo_salida = ?, codigo_proyecto = ? WHERE codigo_unico = ?";
         
         try (PreparedStatement ps = conexion.prepareStatement(sql)) {
@@ -163,7 +174,7 @@ public class AyudanteDAO implements IDAO<Ayudante> {
             ps.setInt(7, ayudante.getNivel());
             ps.setFloat(8, ayudante.getIRA());
             ps.setInt(9, ayudante.getHorasSemanales());
-            ps.setDouble(10, ayudante.getSalarioMensual());
+            ps.setInt(10, ayudante.getMesesContratados());
             ps.setString(11, ayudante.getEstado());
             ps.setTimestamp(12, ayudante.getFechaFinalizacion() != null ? 
                            new Timestamp(ayudante.getFechaFinalizacion().getTime()) : null);
@@ -172,22 +183,38 @@ public class AyudanteDAO implements IDAO<Ayudante> {
                         ayudante.getProyectoAsignado().getCodigoProyecto() : null);
             ps.setString(15, ayudante.getCodigoUnico());
             
-            return ps.executeUpdate() > 0;
+            int rows = ps.executeUpdate();
+            if (rows > 0) {
+                System.out.println("✓ Ayudante actualizado: " + ayudante.getCodigoUnico());
+                return true;
+            }
+            return false;
         } catch (SQLException e) {
-            System.out.println("Error al actualizar ayudante: " + e.getMessage());
+            System.out.println("✗ Error al actualizar ayudante: " + e.getMessage());
             return false;
         }
     }
 
     @Override
     public boolean eliminar(String id) {
-        String sql = "DELETE FROM ayudantes WHERE codigo_unico = ?";
+        // IMPORTANTE: Soft delete - Solo marca como INACTIVO en tabla ayudantes
+        // NO elimina de tabla estudiantes, NO modifica rol en miembros_epn
+        String sql = "UPDATE ayudantes SET estado = 'INACTIVO', " +
+                     "fecha_finalizacion = CURRENT_TIMESTAMP, " +
+                     "motivo_salida = ? WHERE codigo_unico = ?";
         
         try (PreparedStatement ps = conexion.prepareStatement(sql)) {
-            ps.setString(1, id);
-            return ps.executeUpdate() > 0;
+            ps.setString(1, "Baja del sistema");
+            ps.setString(2, id);
+            int rows = ps.executeUpdate();
+            
+            if (rows > 0) {
+                System.out.println("✓ Ayudante dado de baja (soft delete, estudiante preservado): " + id);
+                return true;
+            }
+            return false;
         } catch (SQLException e) {
-            System.out.println("Error al eliminar ayudante: " + e.getMessage());
+            System.out.println("✗ Error al eliminar ayudante: " + e.getMessage());
             return false;
         }
     }
@@ -204,7 +231,7 @@ public class AyudanteDAO implements IDAO<Ayudante> {
         ayudante.setNivel(rs.getInt("nivel"));
         ayudante.setIRA(rs.getFloat("ira"));
         ayudante.setHorasSemanales(rs.getInt("horas_semanales"));
-        ayudante.setSalarioMensual(rs.getDouble("salario_mensual"));
+        ayudante.setMesesContratados(rs.getInt("meses_contratados"));
         ayudante.setEstado(rs.getString("estado"));
         
         if (rs.getTimestamp("fecha_registro") != null) {
@@ -217,12 +244,11 @@ public class AyudanteDAO implements IDAO<Ayudante> {
         
         ayudante.setMotivoSalida(rs.getString("motivo_salida"));
         
-        // Asignar proyecto si existe referencia en BD
         String codigoProyecto = rs.getString("codigo_proyecto");
         if (codigoProyecto != null && !codigoProyecto.isBlank()) {
             try {
                 ProyectoDAO proyectoDAO = new ProyectoDAO();
-                ProyectoInvestigacion proyecto = proyectoDAO.buscarPorId(codigoProyecto);
+                Proyectos proyecto = proyectoDAO.buscarPorId(codigoProyecto);
                 ayudante.setProyectoAsignado(proyecto);
             } catch (Exception ignored) {}
         }
