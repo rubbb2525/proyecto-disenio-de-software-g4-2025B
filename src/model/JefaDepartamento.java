@@ -57,6 +57,15 @@ public class JefaDepartamento extends MiembroEPN {
     }
 
     /**
+     * Carga las notificaciones desde la BD
+     */
+    public void cargarNotificacionesDesdeBD(List<Notificacion> notificacionesBD) {
+        if (notificacionesBD != null) {
+            this.notificaciones = new ArrayList<>(notificacionesBD);
+        }
+    }
+
+    /**
      * Obtiene todas las notificaciones
      */
     public List<Notificacion> getNotificaciones() {
@@ -171,6 +180,13 @@ public class JefaDepartamento extends MiembroEPN {
     /**
      * Genera un reporte específico por proyecto
      */
+    /**
+     * Genera un reporte completo del proyecto
+     * 
+     * NOTA: Usa getAyudantes() deprecated que retorna lista vacía.
+     * En futuro, debería inyectar AyudanteDAO para obtener datos reales.
+     */
+    @SuppressWarnings("deprecation")
     public Reporte generarReportePorProyecto(Proyectos proyecto) {
         String idReporte = "REPORTE_PROYECTO_" + proyecto.getCodigoProyecto();
         Reporte reporte = new Reporte(idReporte, "PROYECTO", "Reporte Proyecto: " + proyecto.getNombreProyecto());

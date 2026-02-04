@@ -157,4 +157,34 @@ public class TecnicoInvestigacion {
     public void setProyectoAsignado(Proyectos proyectoAsignado) {
         this.proyectoAsignado = proyectoAsignado;
     }
+
+    // =========================
+    // MÉTODOS DE UTILIDAD
+    // =========================
+
+    /**
+     * Retorna si el técnico está activo
+     */
+    public boolean esActivo() {
+        return "ACTIVO".equals(estado);
+    }
+
+    /**
+     * Retorna nombres y apellidos concatenados
+     */
+    public String getNombresCompletos() {
+        if (nombres != null && apellidos != null) {
+            return nombres + " " + apellidos;
+        }
+        return nombres != null ? nombres : apellidos;
+    }
+
+    /**
+     * Calcula el costo total del técnico (horas * meses)
+     */
+    public double calcularCostoTotal() {
+        // Estimado: $15 por hora (puedes ajustar este valor)
+        final double TARIFA_HORA = 15.0;
+        return horasSemanales * 4 * mesesContratados * TARIFA_HORA;
+    }
 }

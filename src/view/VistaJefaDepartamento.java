@@ -353,10 +353,10 @@ public class VistaJefaDepartamento extends JFrame {
         JLabel lblAyudantes = new JLabel("Ayudantes: " + ayudantesActivos + " / " + p.getAyudantesPlanificados());
         lblAyudantes.setFont(ConstantesVisuales.FUENTE_NORMAL);
 
-        JLabel lblAsistentes = new JLabel("Asistentes: " + asistentes.size());
+        JLabel lblAsistentes = new JLabel("Asistentes: " + asistentes.size() + " / " + p.getAsistentesPlanificados());
         lblAsistentes.setFont(ConstantesVisuales.FUENTE_NORMAL);
 
-        JLabel lblTecnicos = new JLabel("Técnicos: " + tecnicos.size());
+        JLabel lblTecnicos = new JLabel("Técnicos: " + tecnicos.size() + " / " + p.getTecnicosPlanificados());
         lblTecnicos.setFont(ConstantesVisuales.FUENTE_NORMAL);
 
         card.add(lblNombre);
@@ -402,8 +402,8 @@ public class VistaJefaDepartamento extends JFrame {
         lblFechas.setText("Fechas: " + formatearFecha(p.getFechaInicio()) + " - " + formatearFecha(p.getFechaFin()));
 
         lblAyudantesResumen.setText("Ayudantes: " + ayudantesActivos + " / " + p.getAyudantesPlanificados());
-        lblAsistentesResumen.setText("Asistentes: " + asistentes.size());
-        lblTecnicosResumen.setText("Técnicos: " + tecnicos.size());
+        lblAsistentesResumen.setText("Asistentes: " + asistentes.size() + " / " + p.getAsistentesPlanificados());
+        lblTecnicosResumen.setText("Técnicos: " + tecnicos.size() + " / " + p.getTecnicosPlanificados());
 
         cargarTablaAyudantes(ayudantes);
         cargarTablaAsistentes(asistentes);
@@ -470,6 +470,23 @@ public class VistaJefaDepartamento extends JFrame {
     private void configurarEventos() {
         btnNotificaciones.addActionListener(e -> abrirNotificaciones());
         btnReportes.addActionListener(e -> abrirDialogoReportes());
+        
+        // Actualizar badge de notificaciones al abrir la ventana
+        actualizarBadgeNotificaciones();
+    }
+
+    /**
+     * Actualiza el badge del botón de notificaciones con el contador
+     */
+    private void actualizarBadgeNotificaciones() {
+        int cantidadNoLeidas = controlador.obtenerCantidadNotificacionesNoLeidas();
+        if (cantidadNoLeidas > 0) {
+            btnNotificaciones.setText("Notificaciones (" + cantidadNoLeidas + ")");
+            btnNotificaciones.setForeground(Color.RED);
+        } else {
+            btnNotificaciones.setText("Notificaciones");
+            btnNotificaciones.setForeground(COLOR_TEXTO);
+        }
     }
 
     private void abrirNotificaciones() {
@@ -478,8 +495,11 @@ public class VistaJefaDepartamento extends JFrame {
         dialogo.onMarcarLeidasListener(() -> {
             controlador.marcarNotificacionesComoLeidas();
             ToastMessage.mostrar(this, "Notificaciones marcadas como leídas", ToastMessage.TipoToast.EXITO);
+            actualizarBadgeNotificaciones();
         });
         dialogo.setVisible(true);
+        // Actualizar badge después de cerrar el diálogo
+        actualizarBadgeNotificaciones();
     }
 
     private void abrirDialogoReportes() {

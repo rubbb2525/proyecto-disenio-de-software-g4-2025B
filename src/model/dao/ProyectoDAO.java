@@ -18,8 +18,9 @@ public class ProyectoDAO implements IDAO<Proyectos> {
     @Override
     public boolean guardar(Proyectos proyecto) {
         String sql = "INSERT INTO proyectos (codigo_proyecto, nombre_proyecto, descripcion, " +
-                     "fecha_inicio, fecha_fin, estado, categoria_proyecto, tipo_proyecto, ayudantes_planificados, codigo_director) " +
-                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                     "fecha_inicio, fecha_fin, estado, categoria_proyecto, tipo_proyecto, " +
+                     "ayudantes_planificados, tecnicos_planificados, asistentes_planificados, codigo_director) " +
+                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
         try (PreparedStatement ps = conexion.prepareStatement(sql)) {
             ps.setString(1, proyecto.getCodigoProyecto());
@@ -32,7 +33,9 @@ public class ProyectoDAO implements IDAO<Proyectos> {
             ps.setString(7, proyecto.getTipoProyecto() != null ? proyecto.getTipoProyecto().getCategoria().name() : null);
             ps.setString(8, proyecto.getTipoProyecto() != null ? proyecto.getTipoProyecto().name() : null);
             ps.setInt(9, proyecto.getAyudantesPlanificados());
-            ps.setString(10, proyecto.getDirector() != null ? proyecto.getDirector().getCodigoUnico() : null);
+            ps.setInt(10, proyecto.getTecnicosPlanificados());
+            ps.setInt(11, proyecto.getAsistentesPlanificados());
+            ps.setString(12, proyecto.getDirector() != null ? proyecto.getDirector().getCodigoUnico() : null);
             
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
@@ -115,7 +118,8 @@ public class ProyectoDAO implements IDAO<Proyectos> {
     public boolean actualizar(Proyectos proyecto) {
         String sql = "UPDATE proyectos SET nombre_proyecto = ?, descripcion = ?, " +
                      "fecha_inicio = ?, fecha_fin = ?, estado = ?, categoria_proyecto = ?, tipo_proyecto = ?, " +
-                     "ayudantes_planificados = ?, codigo_director = ? WHERE codigo_proyecto = ?";
+                     "ayudantes_planificados = ?, tecnicos_planificados = ?, asistentes_planificados = ?, " +
+                     "codigo_director = ? WHERE codigo_proyecto = ?";
         
         try (PreparedStatement ps = conexion.prepareStatement(sql)) {
             ps.setString(1, proyecto.getNombreProyecto());
@@ -126,8 +130,10 @@ public class ProyectoDAO implements IDAO<Proyectos> {
             ps.setString(6, proyecto.getTipoProyecto() != null ? proyecto.getTipoProyecto().getCategoria().name() : null);
             ps.setString(7, proyecto.getTipoProyecto() != null ? proyecto.getTipoProyecto().name() : null);
             ps.setInt(8, proyecto.getAyudantesPlanificados());
-            ps.setString(9, proyecto.getDirector() != null ? proyecto.getDirector().getCodigoUnico() : null);
-            ps.setString(10, proyecto.getCodigoProyecto());
+            ps.setInt(9, proyecto.getTecnicosPlanificados());
+            ps.setInt(10, proyecto.getAsistentesPlanificados());
+            ps.setString(11, proyecto.getDirector() != null ? proyecto.getDirector().getCodigoUnico() : null);
+            ps.setString(12, proyecto.getCodigoProyecto());
             
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
@@ -174,21 +180,41 @@ public class ProyectoDAO implements IDAO<Proyectos> {
         proyecto.setTipoProyecto(parseTipoProyecto(rs.getString("tipo_proyecto"), categoriaStr));
         proyecto.setAyudantesPlanificados(rs.getInt("ayudantes_planificados"));
         
+        // Obtener nuevos campos de planificación
+        try {
+            proyecto.setTecnicosPlanificados(rs.getInt("tecnicos_planificados"));
+            proyecto.setAsistentesPlanificados(rs.getInt("asistentes_planificados"));
+        } catch (SQLException ignored) {
+            // Para BD antigua, estos campos pueden no existir
+            proyecto.setTecnicosPlanificados(0);
+            proyecto.setAsistentesPlanificados(0);
+        }
+        
         return proyecto;
     }
 
-    // Parsea fechas en múltiples formatos (YYYY-MM-DD o YYYY-MM-DD HH:MM:SS.mmm)
+    // Parsea fechas en múltiples formatos (YYYY-MM-DD, YYYY-MM-DD HH:MM:SS.mmm, o timestamp en ms)
     private java.util.Date parseFecha(String fechaStr) {
         if (fechaStr == null || fechaStr.isBlank()) {
             return null;
         }
         
         try {
-            // Si la fecha incluye timestamp, extraer solo la parte de la fecha
+            // Intentar parsear como timestamp en milisegundos (números largos)
+            if (fechaStr.matches("\\d+")) {
+                try {
+                    long timestamp = Long.parseLong(fechaStr);
+                    return new java.util.Date(timestamp);
+                } catch (NumberFormatException ignored) {
+                    // No es un número, intentar otros formatos
+                }
+            }
+            
+            // Intentar parsear como fecha YYYY-MM-DD (extraer solo la parte de fecha si incluye tiempo)
             String fechaSolo = fechaStr.split(" ")[0];
             return java.sql.Date.valueOf(fechaSolo);
-        } catch (IllegalArgumentException e) {
-            System.out.println("Error al parsear fecha: " + fechaStr);
+        } catch (Exception e) {
+            // Silenciosamente ignorar errores de parseo - la fecha puede no ser válida
             return null;
         }
     }

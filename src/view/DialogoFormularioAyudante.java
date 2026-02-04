@@ -11,7 +11,7 @@ import javax.swing.*;
 import java.awt.*;
 
 /**
- * Diálogo de registro de ayudante con búsqueda de estudiante y captura de horas/salario.
+ * Diálogo de registro de ayudante con búsqueda de estudiante y captura de horas/meses contratados.
  * Formulario siempre visible con scrollbar. Si no se encuentra, abre una ventana emergente separada.
  */
 public class DialogoFormularioAyudante extends JDialog {

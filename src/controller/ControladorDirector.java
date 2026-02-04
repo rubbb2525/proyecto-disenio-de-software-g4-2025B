@@ -311,11 +311,14 @@ public ResultadoOperacion registrarTecnico(TecnicoInvestigacion tecnico) {
      * @param fechaFin Fecha de finalización
      * @param tipoProyecto Tipo de proyecto (INTERNO, SEMILLA, etc.)
      * @param ayudantesPlanificados Número de ayudantes planificados
+     * @param tecnicosPlanificados Número de técnicos planificados
+     * @param asistentesPlanificados Número de asistentes planificados
      * @return ResultadoOperacion con el resultado de la operación
      */
     public ResultadoOperacion crearProyecto(String codigoProyecto, String nombreProyecto, 
                                            String descripcion, Date fechaInicio, Date fechaFin,
-                                           TipoProyecto tipoProyecto, int ayudantesPlanificados) {
+                                           TipoProyecto tipoProyecto, int ayudantesPlanificados,
+                                           int tecnicosPlanificados, int asistentesPlanificados) {
         // Validar que el director pueda crear proyecto
         Proyectos proyectoExistente = obtenerProyectoDelDirector();
         ResultadoOperacion validacionDirector = directorActual.validarCreacionProyecto(proyectoExistente);
@@ -350,7 +353,9 @@ public ResultadoOperacion registrarTecnico(TecnicoInvestigacion tecnico) {
             fechaFin,
             "ACTIVO",
             tipoProyecto,
-            ayudantesPlanificados
+            ayudantesPlanificados,
+            tecnicosPlanificados,
+            asistentesPlanificados
         );
 
         // Asignar el director al proyecto
@@ -367,6 +372,28 @@ public ResultadoOperacion registrarTecnico(TecnicoInvestigacion tecnico) {
         jefaDepartamento.recibirNotificacion(notif);
 
         return ResultadoOperacion.exitoso("Proyecto creado exitosamente");
+    }
+
+    /**
+     * NUEVO: Obtiene asistentes del proyecto
+     */
+    public List<AsistenteInvestigacion> obtenerAsistentesProyecto() {
+        Proyectos proyecto = obtenerProyectoDelDirector();
+        if (proyecto == null) {
+            return new java.util.ArrayList<>();
+        }
+        return asistenteDAO.buscarPorProyecto(proyecto.getCodigoProyecto());
+    }
+
+    /**
+     * NUEVO: Obtiene técnicos del proyecto
+     */
+    public List<TecnicoInvestigacion> obtenerTecnicosProyecto() {
+        Proyectos proyecto = obtenerProyectoDelDirector();
+        if (proyecto == null) {
+            return new java.util.ArrayList<>();
+        }
+        return tecnicoDAO.buscarPorProyecto(proyecto.getCodigoProyecto());
     }
 
     /**

@@ -92,4 +92,8 @@ public class PanelEstadistica extends JPanel {
     public void actualizarEtiqueta(String nuevaEtiqueta) {
         lblEtiqueta.setText(nuevaEtiqueta);
     }
+    
+    public String obtenerValor() {
+        return lblValor.getText();
+    }
 }
