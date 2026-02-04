@@ -9,13 +9,13 @@ import model.Reporte;
 import model.TecnicoInvestigacion;
 import view.componentes.AdvancedTableModel;
 import view.componentes.ConstantesVisuales;
-import view.componentes.IconManager;
 import view.componentes.RoundedBorder;
 import view.componentes.StyledButton;
 import view.componentes.ToastMessage;
 
 import javax.swing.*;
 import javax.swing.table.JTableHeader;
+import javax.swing.table.DefaultTableCellRenderer;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -27,9 +27,8 @@ import java.util.Set;
 import java.util.TreeSet;
 
 /**
- * Dashboard centralizado para Jefa de Departamento
- * - Dos pestañas: Proyectos y Detalle
- * - Usa ConstantesVisuales
+ * Dashboard Jefa de Departamento - VERSIÓN MEJORADA
+ * Sin emojis ni iconos, solo tipografía y colores
  */
 public class VistaJefaDepartamento extends JFrame {
     private static final Color COLOR_FONDO = ConstantesVisuales.COLOR_FONDO_PRINCIPAL;
@@ -43,11 +42,14 @@ public class VistaJefaDepartamento extends JFrame {
     private JTabbedPane tabs;
     private StyledButton btnNotificaciones;
     private StyledButton btnReportes;
+    private JLabel lblContadorNotif;
 
+    // Detalle del proyecto
     private JLabel lblNombreProyecto;
     private JLabel lblTipoProyecto;
     private JLabel lblDirector;
     private JLabel lblFechas;
+    private JLabel lblEstadoProyecto;
     private JLabel lblAyudantesResumen;
     private JLabel lblAsistentesResumen;
     private JLabel lblTecnicosResumen;
@@ -62,13 +64,16 @@ public class VistaJefaDepartamento extends JFrame {
 
     private Proyectos proyectoSeleccionado;
     private final SimpleDateFormat formatoFecha = new SimpleDateFormat("dd/MM/yyyy");
+    
+    private JPanel tarjetaSeleccionada;
 
     public VistaJefaDepartamento(ControladorJefaDepartamento controlador) {
         this.controlador = controlador;
         setTitle("Dashboard - Jefa de Departamento");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(ConstantesVisuales.VENTANA_DASHBOARD);
+        setSize(1400, 850);
         setLocationRelativeTo(null);
+        setMinimumSize(new Dimension(1200, 700));
 
         inicializarComponentes();
         cargarProyectos();
@@ -77,33 +82,32 @@ public class VistaJefaDepartamento extends JFrame {
     }
 
     private void inicializarComponentes() {
-        JPanel panelPrincipal = new JPanel(new BorderLayout());
+        JPanel panelPrincipal = new JPanel(new BorderLayout(0, 0));
         panelPrincipal.setBackground(COLOR_FONDO);
-        panelPrincipal.setBorder(BorderFactory.createEmptyBorder(
-            ConstantesVisuales.PADDING_MD,
-            ConstantesVisuales.PADDING_MD,
-            ConstantesVisuales.PADDING_MD,
-            ConstantesVisuales.PADDING_MD
-        ));
 
-        JPanel header = crearHeader();
+        // Header
+        JPanel header = crearHeaderMejorado();
 
+        // Tabs
         tabs = new JTabbedPane();
-        tabs.addTab("Proyectos", crearPanelProyectos());
-        tabs.addTab("Detalle", crearPanelDetalle());
+        tabs.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        tabs.setBackground(COLOR_FONDO);
+        
+        tabs.addTab("Vista General de Proyectos", crearPanelProyectos());
+        tabs.addTab("Detalle del Proyecto", crearPanelDetalle());
 
-        JPanel wrapper = new JPanel(new GridBagLayout());
-        wrapper.setBackground(COLOR_FONDO);
-        tabs.setPreferredSize(new Dimension(1200, 700));
-        wrapper.add(tabs, new GridBagConstraints());
+        JPanel centro = new JPanel(new BorderLayout());
+        centro.setBackground(COLOR_FONDO);
+        centro.setBorder(BorderFactory.createEmptyBorder(20, 24, 20, 24));
+        centro.add(tabs, BorderLayout.CENTER);
 
         panelPrincipal.add(header, BorderLayout.NORTH);
-        panelPrincipal.add(wrapper, BorderLayout.CENTER);
+        panelPrincipal.add(centro, BorderLayout.CENTER);
 
         setContentPane(panelPrincipal);
     }
 
-    private JPanel crearHeader() {
+    private JPanel crearHeaderMejorado() {
         JPanel header = new JPanel(new BorderLayout()) {
             @Override
             protected void paintComponent(Graphics g) {
@@ -119,55 +123,86 @@ public class VistaJefaDepartamento extends JFrame {
                 g2d.fillRect(0, 0, getWidth(), getHeight());
             }
         };
-        header.setPreferredSize(new Dimension(0, ConstantesVisuales.ALTURA_HEADER));
-        header.setBorder(BorderFactory.createEmptyBorder(
-            ConstantesVisuales.PADDING_MD,
-            ConstantesVisuales.PADDING_MD,
-            ConstantesVisuales.PADDING_MD,
-            ConstantesVisuales.PADDING_MD
-        ));
+        header.setPreferredSize(new Dimension(0, 70));
+        header.setBorder(BorderFactory.createEmptyBorder(12, 24, 12, 24));
 
-        JLabel titulo = new JLabel("📊 Dashboard de Proyectos");
-        titulo.setFont(ConstantesVisuales.FUENTE_TITULO);
-        titulo.setForeground(Color.WHITE);
-        header.add(titulo, BorderLayout.WEST);
+        // Panel izquierdo
+        JPanel panelIzq = new JPanel();
+        panelIzq.setOpaque(false);
+        panelIzq.setLayout(new BoxLayout(panelIzq, BoxLayout.Y_AXIS));
+        
+        JLabel lblTitulo = new JLabel("Panel de la Jefa de Departamento");
+        lblTitulo.setForeground(Color.WHITE);
+        lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        
+        JLabel lblSubtitulo = new JLabel("Supervisión y Gestión de Proyectos de Investigación");
+        lblSubtitulo.setForeground(new Color(255, 255, 255, 180));
+        lblSubtitulo.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        
+        panelIzq.add(lblTitulo);
+        panelIzq.add(lblSubtitulo);
 
-        JPanel headerRight = new JPanel(new FlowLayout(FlowLayout.RIGHT, ConstantesVisuales.PADDING_SM, 0));
-        headerRight.setOpaque(false);
+        // Panel derecho
+        JPanel panelDer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 0));
+        panelDer.setOpaque(false);
 
+        // Botón notificaciones con contador
+        JPanel contenedorNotif = new JPanel(new BorderLayout(0, 0));
+        contenedorNotif.setOpaque(false);
+        
         btnNotificaciones = new StyledButton("Notificaciones", StyledButton.TipoBoton.SECUNDARIO);
-        btnNotificaciones.setIcon(IconManager.getInstance().getIcon("bell.svg", 16));
-        btnNotificaciones.setToolTipText("Ver notificaciones");
+        btnNotificaciones.setPreferredSize(new Dimension(140, 40));
+        btnNotificaciones.setToolTipText("Ver notificaciones del sistema");
+        
+        lblContadorNotif = new JLabel("");
+        lblContadorNotif.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        lblContadorNotif.setForeground(Color.WHITE);
+        lblContadorNotif.setBackground(new Color(231, 76, 60));
+        lblContadorNotif.setOpaque(true);
+        lblContadorNotif.setHorizontalAlignment(SwingConstants.CENTER);
+        lblContadorNotif.setBorder(BorderFactory.createEmptyBorder(2, 6, 2, 6));
+        lblContadorNotif.setVisible(false);
+        
+        contenedorNotif.add(btnNotificaciones, BorderLayout.CENTER);
+        contenedorNotif.add(lblContadorNotif, BorderLayout.EAST);
 
-        btnReportes = new StyledButton("Reportes", StyledButton.TipoBoton.EXITO);
-        btnReportes.setIcon(IconManager.getInstance().getIcon("report.svg", 16));
-        btnReportes.setToolTipText("Generar reportes");
+        btnReportes = new StyledButton("Generar Reportes", StyledButton.TipoBoton.EXITO);
+        btnReportes.setPreferredSize(new Dimension(160, 40));
+        btnReportes.setToolTipText("Generar reportes estadísticos");
 
-        headerRight.add(btnNotificaciones);
-        headerRight.add(btnReportes);
-        header.add(headerRight, BorderLayout.EAST);
+        panelDer.add(contenedorNotif);
+        panelDer.add(btnReportes);
+
+        header.add(panelIzq, BorderLayout.WEST);
+        header.add(panelDer, BorderLayout.EAST);
         return header;
     }
 
     private JPanel crearPanelProyectos() {
-        JPanel panel = new JPanel(new BorderLayout());
+        JPanel panel = new JPanel(new BorderLayout(0, 16));
         panel.setBackground(COLOR_FONDO);
+        panel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
 
-        panelProyectos = new JPanel(new GridLayout(0, 2, ConstantesVisuales.PADDING_MD, ConstantesVisuales.PADDING_MD));
+        // Título de sección
+        JLabel lblTitulo = new JLabel("PROYECTOS DE INVESTIGACIÓN ACTIVOS");
+        lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        lblTitulo.setForeground(new Color(100, 100, 100));
+        lblTitulo.setBorder(BorderFactory.createEmptyBorder(0, 0, 12, 0));
+
+        panelProyectos = new JPanel(new GridLayout(0, 1, 20, 20));
         panelProyectos.setBackground(COLOR_FONDO);
-        panelProyectos.setBorder(BorderFactory.createEmptyBorder(
-            ConstantesVisuales.PADDING_MD,
-            ConstantesVisuales.PADDING_MD,
-            ConstantesVisuales.PADDING_MD,
-            ConstantesVisuales.PADDING_MD
-        ));
 
         JScrollPane scroll = new JScrollPane(panelProyectos);
         scroll.setBorder(BorderFactory.createEmptyBorder());
         scroll.getViewport().setBackground(COLOR_FONDO);
         scroll.getVerticalScrollBar().setUnitIncrement(16);
 
-        panel.add(scroll, BorderLayout.CENTER);
+        JPanel contenedor = new JPanel(new BorderLayout());
+        contenedor.setBackground(COLOR_FONDO);
+        contenedor.add(lblTitulo, BorderLayout.NORTH);
+        contenedor.add(scroll, BorderLayout.CENTER);
+
+        panel.add(contenedor, BorderLayout.CENTER);
         return panel;
     }
 
@@ -176,83 +211,140 @@ public class VistaJefaDepartamento extends JFrame {
         panel.setBackground(COLOR_FONDO);
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
 
-        JPanel cardInfo = new JPanel();
-        cardInfo.setLayout(new BoxLayout(cardInfo, BoxLayout.Y_AXIS));
-        cardInfo.setBackground(COLOR_TARJETA);
-        cardInfo.setBorder(BorderFactory.createCompoundBorder(
-            new RoundedBorder(ConstantesVisuales.RADIO_BORDE_GRANDE, COLOR_BORDE, 1),
-            BorderFactory.createEmptyBorder(
-                ConstantesVisuales.PADDING_MD,
-                ConstantesVisuales.PADDING_MD,
-                ConstantesVisuales.PADDING_MD,
-                ConstantesVisuales.PADDING_MD
-            )
+        // Título de sección
+        JLabel lblTitulo = new JLabel("INFORMACIÓN DETALLADA DEL PROYECTO");
+        lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        lblTitulo.setForeground(new Color(100, 100, 100));
+        lblTitulo.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(lblTitulo);
+        panel.add(Box.createVerticalStrut(12));
+
+        // Card de información del proyecto
+        JPanel cardInfo = crearCardInformacion();
+        cardInfo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 220));
+        panel.add(cardInfo);
+        panel.add(Box.createVerticalStrut(20));
+
+        // Título de subsección
+        JLabel lblSubtitulo = new JLabel("COLABORADORES DEL PROYECTO");
+        lblSubtitulo.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        lblSubtitulo.setForeground(new Color(100, 100, 100));
+        lblSubtitulo.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(lblSubtitulo);
+        panel.add(Box.createVerticalStrut(12));
+
+        // Panel de tablas
+        JPanel panelTablas = crearPanelTablas();
+        panelTablas.setMaximumSize(new Dimension(Integer.MAX_VALUE, 400));
+        panel.add(panelTablas);
+
+        return panel;
+    }
+
+    private JPanel crearCardInformacion() {
+        JPanel card = new JPanel();
+        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+        card.setBackground(COLOR_TARJETA);
+        card.setBorder(BorderFactory.createCompoundBorder(
+            new RoundedBorder(12, COLOR_BORDE, 1),
+            BorderFactory.createEmptyBorder(24, 28, 24, 28)
         ));
 
-        lblNombreProyecto = crearLabelDetalle("Proyecto: --", ConstantesVisuales.FUENTE_SUBTITULO);
-        lblTipoProyecto = crearLabelDetalle("Tipo: --", ConstantesVisuales.FUENTE_NORMAL);
-        lblDirector = crearLabelDetalle("Director: --", ConstantesVisuales.FUENTE_NORMAL);
-        lblFechas = crearLabelDetalle("Fechas: --", ConstantesVisuales.FUENTE_NORMAL);
+        // Nombre del proyecto (destacado)
+        lblNombreProyecto = new JLabel("Seleccione un proyecto de la pestaña anterior");
+        lblNombreProyecto.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        lblNombreProyecto.setForeground(COLOR_PRIMARIO);
+        lblNombreProyecto.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        lblAyudantesResumen = crearLabelDetalle("Ayudantes: --", ConstantesVisuales.FUENTE_NORMAL);
-        lblAsistentesResumen = crearLabelDetalle("Asistentes: --", ConstantesVisuales.FUENTE_NORMAL);
-        lblTecnicosResumen = crearLabelDetalle("Técnicos: --", ConstantesVisuales.FUENTE_NORMAL);
+        // Panel de metadatos (2 columnas)
+        JPanel panelMeta = new JPanel(new GridLayout(2, 2, 20, 8));
+        panelMeta.setOpaque(false);
+        panelMeta.setMaximumSize(new Dimension(Integer.MAX_VALUE, 80));
 
-        cardInfo.add(lblNombreProyecto);
-        cardInfo.add(Box.createVerticalStrut(6));
-        cardInfo.add(lblTipoProyecto);
-        cardInfo.add(lblDirector);
-        cardInfo.add(lblFechas);
-        cardInfo.add(Box.createVerticalStrut(8));
-        cardInfo.add(lblAyudantesResumen);
-        cardInfo.add(lblAsistentesResumen);
-        cardInfo.add(lblTecnicosResumen);
+        lblTipoProyecto = crearLabelInfo("Tipo de proyecto: --");
+        lblDirector = crearLabelInfo("Director responsable: --");
+        lblFechas = crearLabelInfo("Periodo de ejecución: --");
+        lblEstadoProyecto = crearLabelInfo("Estado: --");
 
-        panel.add(cardInfo);
-        panel.add(Box.createVerticalStrut(ConstantesVisuales.MARGIN_ENTRE_SECCIONES));
+        panelMeta.add(lblTipoProyecto);
+        panelMeta.add(lblDirector);
+        panelMeta.add(lblFechas);
+        panelMeta.add(lblEstadoProyecto);
 
-        JPanel panelTablas = new JPanel(new GridLayout(1, 3, ConstantesVisuales.PADDING_MD, 0));
-        panelTablas.setBackground(COLOR_FONDO);
+        // Separador
+        JSeparator sep = new JSeparator();
+        sep.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
+        sep.setForeground(COLOR_BORDE);
+
+        // Panel de resumen de colaboradores
+        JPanel panelResumen = new JPanel(new GridLayout(1, 3, 16, 0));
+        panelResumen.setOpaque(false);
+        panelResumen.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+
+        lblAyudantesResumen = crearLabelResumen("Ayudantes: --");
+        lblAsistentesResumen = crearLabelResumen("Asistentes: --");
+        lblTecnicosResumen = crearLabelResumen("Técnicos: --");
+
+        panelResumen.add(lblAyudantesResumen);
+        panelResumen.add(lblAsistentesResumen);
+        panelResumen.add(lblTecnicosResumen);
+
+        card.add(lblNombreProyecto);
+        card.add(Box.createVerticalStrut(16));
+        card.add(panelMeta);
+        card.add(Box.createVerticalStrut(16));
+        card.add(sep);
+        card.add(Box.createVerticalStrut(16));
+        card.add(panelResumen);
+
+        return card;
+    }
+
+    private JLabel crearLabelInfo(String texto) {
+        JLabel lbl = new JLabel(texto);
+        lbl.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        lbl.setForeground(new Color(120, 120, 120));
+        return lbl;
+    }
+
+    private JLabel crearLabelResumen(String texto) {
+        JLabel lbl = new JLabel(texto);
+        lbl.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        lbl.setForeground(COLOR_TEXTO);
+        lbl.setHorizontalAlignment(SwingConstants.CENTER);
+        return lbl;
+    }
+
+    private JPanel crearPanelTablas() {
+        JPanel panel = new JPanel(new GridLayout(1, 3, 16, 0));
+        panel.setOpaque(false);
 
         JPanel cardAyudantes = crearCardTabla("Ayudantes", crearTablaAyudantes());
         JPanel cardAsistentes = crearCardTabla("Asistentes", crearTablaAsistentes());
         JPanel cardTecnicos = crearCardTabla("Técnicos", crearTablaTecnicos());
 
-        panelTablas.add(cardAyudantes);
-        panelTablas.add(cardAsistentes);
-        panelTablas.add(cardTecnicos);
+        panel.add(cardAyudantes);
+        panel.add(cardAsistentes);
+        panel.add(cardTecnicos);
 
-        panel.add(panelTablas);
         return panel;
     }
 
-    private JLabel crearLabelDetalle(String texto, Font fuente) {
-        JLabel lbl = new JLabel(texto);
-        lbl.setFont(fuente);
-        lbl.setForeground(COLOR_TEXTO);
-        return lbl;
-    }
-
     private JPanel crearCardTabla(String titulo, JTable tabla) {
-        JPanel card = new JPanel(new BorderLayout());
+        JPanel card = new JPanel(new BorderLayout(0, 12));
         card.setBackground(COLOR_TARJETA);
         card.setBorder(BorderFactory.createCompoundBorder(
-            new RoundedBorder(ConstantesVisuales.RADIO_BORDE_GRANDE, COLOR_BORDE, 1),
-            BorderFactory.createEmptyBorder(
-                ConstantesVisuales.PADDING_MD,
-                ConstantesVisuales.PADDING_MD,
-                ConstantesVisuales.PADDING_MD,
-                ConstantesVisuales.PADDING_MD
-            )
+            new RoundedBorder(12, COLOR_BORDE, 1),
+            BorderFactory.createEmptyBorder(16, 16, 16, 16)
         ));
 
         JLabel lblTitulo = new JLabel(titulo);
-        lblTitulo.setFont(ConstantesVisuales.FUENTE_SUBTITULO);
+        lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 14));
         lblTitulo.setForeground(COLOR_TEXTO);
         card.add(lblTitulo, BorderLayout.NORTH);
 
         JScrollPane scroll = new JScrollPane(tabla);
-        scroll.setBorder(BorderFactory.createEmptyBorder());
+        scroll.setBorder(BorderFactory.createLineBorder(COLOR_BORDE, 1));
         card.add(scroll, BorderLayout.CENTER);
 
         return card;
@@ -283,27 +375,56 @@ public class VistaJefaDepartamento extends JFrame {
     }
 
     private void estilizarTabla(JTable tabla) {
-        tabla.setRowHeight(ConstantesVisuales.ALTURA_CAMPO_TEXTO);
-        tabla.setFont(ConstantesVisuales.FUENTE_NORMAL);
+        tabla.setRowHeight(35);
+        tabla.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         tabla.setForeground(COLOR_TEXTO);
-        tabla.setSelectionBackground(ConstantesVisuales.COLOR_SECUNDARIO_CLARO);
-        tabla.setGridColor(COLOR_BORDE);
+        tabla.setSelectionBackground(new Color(52, 152, 219, 30));
+        tabla.setSelectionForeground(COLOR_TEXTO);
+        tabla.setGridColor(new Color(220, 220, 220));
         tabla.setShowVerticalLines(false);
 
         JTableHeader th = tabla.getTableHeader();
-        th.setBackground(ConstantesVisuales.COLOR_PRIMARIO);
+        th.setBackground(COLOR_PRIMARIO);
         th.setForeground(Color.WHITE);
-        th.setFont(ConstantesVisuales.FUENTE_NEGRITA);
-        th.setPreferredSize(new Dimension(0, 40));
+        th.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        th.setPreferredSize(new Dimension(0, 35));
+
+        // Filas alternadas
+        tabla.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value,
+                    boolean isSelected, boolean hasFocus, int row, int column) {
+                Component c = super.getTableCellRendererComponent(table, value,
+                    isSelected, hasFocus, row, column);
+                
+                if (!isSelected) {
+                    c.setBackground(row % 2 == 0 ? Color.WHITE : new Color(248, 250, 252));
+                }
+                
+                if (c instanceof JLabel) {
+                    ((JLabel) c).setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 8));
+                }
+                
+                return c;
+            }
+        });
     }
 
     private void cargarProyectos() {
         panelProyectos.removeAll();
         List<Proyectos> proyectos = controlador.obtenerTodosProyectos();
 
-        for (Proyectos p : proyectos) {
-            JPanel card = crearTarjetaProyecto(p);
-            panelProyectos.add(card);
+        if (proyectos.isEmpty()) {
+            JLabel lblVacio = new JLabel("No hay proyectos disponibles");
+            lblVacio.setFont(new Font("Segoe UI", Font.ITALIC, 14));
+            lblVacio.setForeground(new Color(150, 150, 150));
+            lblVacio.setHorizontalAlignment(SwingConstants.CENTER);
+            panelProyectos.add(lblVacio);
+        } else {
+            for (Proyectos p : proyectos) {
+                JPanel card = crearTarjetaProyecto(p);
+                panelProyectos.add(card);
+            }
         }
 
         panelProyectos.revalidate();
@@ -319,16 +440,12 @@ public class VistaJefaDepartamento extends JFrame {
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setBackground(COLOR_TARJETA);
         card.setBorder(BorderFactory.createCompoundBorder(
-            new RoundedBorder(ConstantesVisuales.RADIO_BORDE_GRANDE, COLOR_BORDE, 1),
-            BorderFactory.createEmptyBorder(
-                ConstantesVisuales.PADDING_MD,
-                ConstantesVisuales.PADDING_MD,
-                ConstantesVisuales.PADDING_MD,
-                ConstantesVisuales.PADDING_MD
-            )
+            new RoundedBorder(12, COLOR_BORDE, 1),
+            BorderFactory.createEmptyBorder(20, 20, 20, 20)
         ));
         card.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
+        // Obtener datos
         List<Ayudante> ayudantes = controlador.obtenerAyudantesProyecto(p.getCodigoProyecto());
         long ayudantesActivos = ayudantes.stream().filter(Ayudante::esActivo).count();
         List<AsistenteInvestigacion> asistentes = controlador.obtenerAsistentesProyecto(p.getCodigoProyecto());
@@ -338,39 +455,77 @@ public class VistaJefaDepartamento extends JFrame {
             ? p.getDirector().getNombresCompletos()
             : "Sin asignar";
 
+        // Nombre del proyecto
         JLabel lblNombre = new JLabel(p.getNombreProyecto());
-        lblNombre.setFont(ConstantesVisuales.FUENTE_SUBTITULO);
-        lblNombre.setForeground(COLOR_TEXTO);
+        lblNombre.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        lblNombre.setForeground(COLOR_PRIMARIO);
+        lblNombre.setAlignmentX(Component.LEFT_ALIGNMENT);
 
+        // Código del proyecto
+        JLabel lblCodigo = new JLabel("Código: " + p.getCodigoProyecto());
+        lblCodigo.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        lblCodigo.setForeground(new Color(150, 150, 150));
+        lblCodigo.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        // Metadata
         JLabel lblTipo = new JLabel("Tipo: " + (p.getTipoProyecto() != null ? p.getTipoProyecto() : "N/A"));
-        lblTipo.setFont(ConstantesVisuales.FUENTE_NORMAL_PEQUEÑO);
-        lblTipo.setForeground(ConstantesVisuales.COLOR_TEXTO_SECUNDARIO);
+        lblTipo.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        lblTipo.setForeground(new Color(120, 120, 120));
+        lblTipo.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JLabel lblDirector = new JLabel("Director: " + directorNombre);
-        lblDirector.setFont(ConstantesVisuales.FUENTE_NORMAL_PEQUEÑO);
-        lblDirector.setForeground(ConstantesVisuales.COLOR_TEXTO_SECUNDARIO);
+        lblDirector.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        lblDirector.setForeground(new Color(120, 120, 120));
+        lblDirector.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel lblAyudantes = new JLabel("Ayudantes: " + ayudantesActivos + " / " + p.getAyudantesPlanificados());
-        lblAyudantes.setFont(ConstantesVisuales.FUENTE_NORMAL);
+        // Separador
+        JSeparator sep = new JSeparator();
+        sep.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
+        sep.setForeground(COLOR_BORDE);
 
-        JLabel lblAsistentes = new JLabel("Asistentes: " + asistentes.size() + " / " + p.getAsistentesPlanificados());
-        lblAsistentes.setFont(ConstantesVisuales.FUENTE_NORMAL);
+        // Panel de estadísticas
+        JPanel panelStats = new JPanel(new GridLayout(3, 1, 0, 6));
+        panelStats.setOpaque(false);
+        panelStats.setMaximumSize(new Dimension(Integer.MAX_VALUE, 80));
 
-        JLabel lblTecnicos = new JLabel("Técnicos: " + tecnicos.size() + " / " + p.getTecnicosPlanificados());
-        lblTecnicos.setFont(ConstantesVisuales.FUENTE_NORMAL);
+        JLabel lblAyudantes = crearLabelStat("Ayudantes:", ayudantesActivos, p.getAyudantesPlanificados());
+        JLabel lblAsistentes = crearLabelStat("Asistentes:", asistentes.size(), p.getAsistentesPlanificados());
+        JLabel lblTecnicos = crearLabelStat("Técnicos:", tecnicos.size(), p.getTecnicosPlanificados());
+
+        panelStats.add(lblAyudantes);
+        panelStats.add(lblAsistentes);
+        panelStats.add(lblTecnicos);
 
         card.add(lblNombre);
-        card.add(Box.createVerticalStrut(4));
+        card.add(Box.createVerticalStrut(2));
+        card.add(lblCodigo);
+        card.add(Box.createVerticalStrut(12));
         card.add(lblTipo);
         card.add(lblDirector);
-        card.add(Box.createVerticalStrut(8));
-        card.add(lblAyudantes);
-        card.add(lblAsistentes);
-        card.add(lblTecnicos);
+        card.add(Box.createVerticalStrut(12));
+        card.add(sep);
+        card.add(Box.createVerticalStrut(12));
+        card.add(panelStats);
 
+        // Efecto hover y click
         card.addMouseListener(new MouseAdapter() {
             @Override
+            public void mouseEntered(MouseEvent e) {
+                if (card != tarjetaSeleccionada) {
+                    card.setBackground(new Color(248, 250, 252));
+                }
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                if (card != tarjetaSeleccionada) {
+                    card.setBackground(COLOR_TARJETA);
+                }
+            }
+
+            @Override
             public void mouseClicked(MouseEvent e) {
+                seleccionarTarjetaVisual(card);
                 seleccionarProyecto(p);
                 tabs.setSelectedIndex(1);
             }
@@ -379,12 +534,45 @@ public class VistaJefaDepartamento extends JFrame {
         return card;
     }
 
+    private JLabel crearLabelStat(String label, long actual, int total) {
+        String texto = label + " " + actual + " / " + total;
+        JLabel lbl = new JLabel(texto);
+        lbl.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        lbl.setForeground(COLOR_TEXTO);
+        
+        // Colorear según disponibilidad
+        if (actual < total) {
+            lbl.setForeground(new Color(46, 204, 113)); // Verde
+        } else if (actual == total) {
+            lbl.setForeground(new Color(243, 156, 18)); // Amarillo
+        } else {
+            lbl.setForeground(new Color(231, 76, 60)); // Rojo
+        }
+        
+        return lbl;
+    }
+
+    private void seleccionarTarjetaVisual(JPanel card) {
+        if (tarjetaSeleccionada != null) {
+            tarjetaSeleccionada.setBorder(BorderFactory.createCompoundBorder(
+                new RoundedBorder(12, COLOR_BORDE, 1),
+                BorderFactory.createEmptyBorder(20, 20, 20, 20)
+            ));
+            tarjetaSeleccionada.setBackground(COLOR_TARJETA);
+        }
+        
+        tarjetaSeleccionada = card;
+        tarjetaSeleccionada.setBorder(BorderFactory.createCompoundBorder(
+            new RoundedBorder(12, COLOR_PRIMARIO, 3),
+            BorderFactory.createEmptyBorder(18, 18, 18, 18)
+        ));
+        tarjetaSeleccionada.setBackground(new Color(230, 240, 255));
+    }
+
     private void seleccionarProyecto(Proyectos p) {
         this.proyectoSeleccionado = p;
 
-        if (p == null) {
-            return;
-        }
+        if (p == null) return;
 
         List<Ayudante> ayudantes = controlador.obtenerAyudantesProyecto(p.getCodigoProyecto());
         List<AsistenteInvestigacion> asistentes = controlador.obtenerAsistentesProyecto(p.getCodigoProyecto());
@@ -396,10 +584,11 @@ public class VistaJefaDepartamento extends JFrame {
             ? p.getDirector().getNombresCompletos()
             : "Sin asignar";
 
-        lblNombreProyecto.setText("Proyecto: " + p.getNombreProyecto());
-        lblTipoProyecto.setText("Tipo: " + (p.getTipoProyecto() != null ? p.getTipoProyecto() : "N/A"));
-        lblDirector.setText("Director: " + directorNombre);
-        lblFechas.setText("Fechas: " + formatearFecha(p.getFechaInicio()) + " - " + formatearFecha(p.getFechaFin()));
+        lblNombreProyecto.setText(p.getNombreProyecto());
+        lblTipoProyecto.setText("Tipo de proyecto: " + (p.getTipoProyecto() != null ? p.getTipoProyecto() : "N/A"));
+        lblDirector.setText("Director responsable: " + directorNombre);
+        lblFechas.setText("Periodo de ejecución: " + formatearFecha(p.getFechaInicio()) + " - " + formatearFecha(p.getFechaFin()));
+        lblEstadoProyecto.setText("Estado: " + (p.getEstado() != null ? p.getEstado() : "Activo"));
 
         lblAyudantesResumen.setText("Ayudantes: " + ayudantesActivos + " / " + p.getAyudantesPlanificados());
         lblAsistentesResumen.setText("Asistentes: " + asistentes.size() + " / " + p.getAsistentesPlanificados());
@@ -461,9 +650,7 @@ public class VistaJefaDepartamento extends JFrame {
     }
 
     private String formatearFecha(java.util.Date fecha) {
-        if (fecha == null) {
-            return "N/A";
-        }
+        if (fecha == null) return "N/A";
         return formatoFecha.format(fecha);
     }
 
@@ -471,21 +658,16 @@ public class VistaJefaDepartamento extends JFrame {
         btnNotificaciones.addActionListener(e -> abrirNotificaciones());
         btnReportes.addActionListener(e -> abrirDialogoReportes());
         
-        // Actualizar badge de notificaciones al abrir la ventana
         actualizarBadgeNotificaciones();
     }
 
-    /**
-     * Actualiza el badge del botón de notificaciones con el contador
-     */
     private void actualizarBadgeNotificaciones() {
         int cantidadNoLeidas = controlador.obtenerCantidadNotificacionesNoLeidas();
         if (cantidadNoLeidas > 0) {
-            btnNotificaciones.setText("Notificaciones (" + cantidadNoLeidas + ")");
-            btnNotificaciones.setForeground(Color.RED);
+            lblContadorNotif.setText(String.valueOf(cantidadNoLeidas));
+            lblContadorNotif.setVisible(true);
         } else {
-            btnNotificaciones.setText("Notificaciones");
-            btnNotificaciones.setForeground(COLOR_TEXTO);
+            lblContadorNotif.setVisible(false);
         }
     }
 
@@ -498,7 +680,6 @@ public class VistaJefaDepartamento extends JFrame {
             actualizarBadgeNotificaciones();
         });
         dialogo.setVisible(true);
-        // Actualizar badge después de cerrar el diálogo
         actualizarBadgeNotificaciones();
     }
 
@@ -510,9 +691,7 @@ public class VistaJefaDepartamento extends JFrame {
         DialogoGenerarReporte dialogo = new DialogoGenerarReporte(this, proyectos, carreras, niveles);
         dialogo.setVisible(true);
 
-        if (!dialogo.seGenero()) {
-            return;
-        }
+        if (!dialogo.seGenero()) return;
 
         Reporte reporte = generarReporte(dialogo.getTipoReporte(), dialogo.getFiltroSeleccionado());
         if (reporte == null) {
@@ -551,18 +730,16 @@ public class VistaJefaDepartamento extends JFrame {
             "Exportar Reporte",
             JOptionPane.YES_NO_OPTION);
 
-        if (opcion != JOptionPane.YES_OPTION) {
-            return;
-        }
+        if (opcion != JOptionPane.YES_OPTION) return;
 
         JFileChooser chooser = new JFileChooser();
         chooser.setSelectedFile(new File("reporte_" + System.currentTimeMillis() + ".pdf"));
         if (chooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
             boolean exito = controlador.exportarReportePDF(reporte, chooser.getSelectedFile().getAbsolutePath());
             if (exito) {
-                ToastMessage.mostrar(this, "Reporte exportado a PDF", ToastMessage.TipoToast.EXITO);
+                ToastMessage.mostrar(this, "Reporte exportado exitosamente", ToastMessage.TipoToast.EXITO);
             } else {
-                ToastMessage.mostrar(this, "Error al exportar reporte a PDF", ToastMessage.TipoToast.ERROR);
+                ToastMessage.mostrar(this, "Error al exportar reporte", ToastMessage.TipoToast.ERROR);
             }
         }
     }
