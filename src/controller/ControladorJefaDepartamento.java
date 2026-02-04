@@ -2,7 +2,7 @@ package controller;
 
 import model.*;
 import model.dao.*;
-import model.service.*;
+import model.service.ServicioDeEstadisticas;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
@@ -11,78 +11,78 @@ import java.util.HashMap;
  * Controlador para operaciones de la Jefa de Departamento
  * 
  * REFACTORIZACIÓN:
- * - Usa ServicioDeFiltrado en lugar de jefaDepartamento.filtrarAyudantes()
- * - Usa ServicioDeEstadisticas en lugar de calcularEstadisticas() directo
- * - GeneradorReportes ahora solo orquesta (no calcula estadísticas)
+ * - Usa Ayudante.filtrar/obtenerActivos/etc. en lugar de ServicioDeFiltrado
+ * - Usa ServicioDeEstadisticas para estadísticas agregadas
+ * - JefaDepartamento genera reportes (no calcula estadísticas)
  * - JefaDepartamento ahora solo maneja datos de usuario y notificaciones
  */
 public class ControladorJefaDepartamento {
     private JefaDepartamento jefaDepartamento;
     private AyudanteDAO ayudanteDAO;
     private ProyectoDAO proyectoDAO;
-    
-    // INYECCIÓN DE SERVICIOS
-    private ServicioDeFiltrado servicioDeFiltrado;
-    private ServicioDeEstadisticas servicioEstadisticas;
+    private AsistenteDAO asistenteDAO;
+    private TecnicoDAO tecnicoDAO;
 
     public ControladorJefaDepartamento(JefaDepartamento jefa, AyudanteDAO ayudanteDAO, 
                                       ProyectoDAO proyectoDAO) {
         this.jefaDepartamento = jefa;
         this.ayudanteDAO = ayudanteDAO;
         this.proyectoDAO = proyectoDAO;
+        this.asistenteDAO = new AsistenteDAO();
+        this.tecnicoDAO = new TecnicoDAO();
         
-        // ServicioDeFiltrado y ServicioDeEstadisticas tienen métodos estáticos
-        // No es necesario instanciarlos
+        // ServicioDeEstadisticas tiene métodos estáticos
+        // No es necesario instanciarlo
     }
 
     /**
      * Filtra ayudantes según criterios
      * 
      * REFACTORIZACIÓN:
-     * - Usa ServicioDeFiltrado en lugar de jefaDepartamento.filtrarAyudantes()
+     * - Usa Ayudante.filtrar en lugar de ServicioDeFiltrado
      * - JefaDepartamento ya NO tiene responsabilidad de filtrado
      */
     public List<Ayudante> filtrarAyudantes(Map<String, Object> filtros) {
         List<Ayudante> todosAyudantes = ayudanteDAO.listarTodos();
         
-        // CAMBIO: Usar ServicioDeFiltrado
-        return ServicioDeFiltrado.filtrarAyudantes(todosAyudantes, filtros);
+        // CAMBIO: Usar método estático del modelo
+        return Ayudante.filtrar(todosAyudantes, filtros);
     }
 
     /**
      * NUEVO: Obtiene ayudantes activos
-     * Usa ServicioDeFiltrado
+     * Usa Ayudante.obtenerActivos
      */
     public List<Ayudante> obtenerAyudantesActivos() {
         List<Ayudante> todos = ayudanteDAO.listarTodos();
-        return ServicioDeFiltrado.obtenerActivos(todos);
+        return Ayudante.obtenerActivos(todos);
     }
 
     /**
      * NUEVO: Obtiene ayudantes inactivos
-     * Usa ServicioDeFiltrado
+     * Usa Ayudante.obtenerInactivos
      */
     public List<Ayudante> obtenerAyudantesInactivos() {
         List<Ayudante> todos = ayudanteDAO.listarTodos();
-        return ServicioDeFiltrado.obtenerInactivos(todos);
+        return Ayudante.obtenerInactivos(todos);
     }
 
     /**
      * NUEVO: Obtiene ayudantes de una carrera específica
-     * Usa ServicioDeFiltrado
+     * Usa Ayudante.porCarrera
      */
     public List<Ayudante> obtenerAyudantesPorCarrera(String carrera) {
         List<Ayudante> todos = ayudanteDAO.listarTodos();
-        return ServicioDeFiltrado.porCarrera(todos, carrera);
+        return Ayudante.porCarrera(todos, carrera);
     }
 
     /**
      * NUEVO: Obtiene ayudantes de un nivel específico
-     * Usa ServicioDeFiltrado
+     * Usa Ayudante.porNivel
      */
     public List<Ayudante> obtenerAyudantesPorNivel(int nivel) {
         List<Ayudante> todos = ayudanteDAO.listarTodos();
-        return ServicioDeFiltrado.porNivel(todos, nivel);
+        return Ayudante.porNivel(todos, nivel);
     }
 
     /**
@@ -134,22 +134,9 @@ public class ControladorJefaDepartamento {
         List<Object[]> resumen = new java.util.ArrayList<>();
         List<Proyectos> proyectos = proyectoDAO.listarTodos();
         for (Proyectos p : proyectos) {
-            int planificados = p.getAyudantesPlanificados();
             List<Ayudante> ayudantesProyecto = ayudanteDAO.buscarPorProyecto(p.getCodigoProyecto());
-            
-            // Usar servicio de estadísticas para contar activos
-            long contratadosActivos = ServicioDeEstadisticas.contarActivos(ayudantesProyecto);
-            int cupos = Math.max(0, planificados - (int)contratadosActivos);
-            Object[] fila = {
-                p.getCodigoProyecto(),
-                p.getNombreProyecto(),
-                planificados,
-                contratadosActivos,
-                cupos,
-                p.getEstado(),
-                p.getFechaInicio(),
-                p.getFechaFin()
-            };
+
+            Object[] fila = p.crearResumen(ayudantesProyecto);
             resumen.add(fila);
         }
         return resumen;
@@ -159,15 +146,14 @@ public class ControladorJefaDepartamento {
      * Genera un reporte general
      * 
      * REFACTORIZACIÓN:
-     * - GeneradorReportes ahora solo orquesta
+    * - JefaDepartamento genera reportes
      * - Los servicios hacen el trabajo específico
      */
     public Reporte generarReporteGeneral() {
         List<Proyectos> proyectos = proyectoDAO.listarTodos();
         List<Ayudante> ayudantes = ayudanteDAO.listarTodos();
-        
-        GeneradorReportes generador = new GeneradorReportes(proyectos, ayudantes);
-        return generador.generarReporteGeneral();
+
+        return jefaDepartamento.generarReporteGeneral(proyectos, ayudantes);
     }
 
     /**
@@ -178,33 +164,25 @@ public class ControladorJefaDepartamento {
         if (proyecto == null) {
             return null;
         }
-        List<Proyectos> proyectos = proyectoDAO.listarTodos();
-        List<Ayudante> ayudantes = ayudanteDAO.listarTodos();
-        
-        GeneradorReportes generador = new GeneradorReportes(proyectos, ayudantes);
-        return generador.generarReportePorProyecto(proyecto);
+        return jefaDepartamento.generarReportePorProyecto(proyecto);
     }
 
     /**
      * Genera un reporte por carrera
      */
     public Reporte generarReportePorCarrera(String carrera) {
-        List<Proyectos> proyectos = proyectoDAO.listarTodos();
         List<Ayudante> ayudantes = ayudanteDAO.listarTodos();
-        
-        GeneradorReportes generador = new GeneradorReportes(proyectos, ayudantes);
-        return generador.generarReportePorCarrera(carrera);
+
+        return jefaDepartamento.generarReportePorCarrera(carrera, ayudantes);
     }
 
     /**
      * Genera un reporte por nivel
      */
     public Reporte generarReportePorNivel(int nivel) {
-        List<Proyectos> proyectos = proyectoDAO.listarTodos();
         List<Ayudante> ayudantes = ayudanteDAO.listarTodos();
-        
-        GeneradorReportes generador = new GeneradorReportes(proyectos, ayudantes);
-        return generador.generarReportePorNivel(nivel);
+
+        return jefaDepartamento.generarReportePorNivel(nivel, ayudantes);
     }
 
     /**
@@ -254,8 +232,7 @@ public class ControladorJefaDepartamento {
      */
     public boolean exportarReportePDF(Reporte reporte, String rutaArchivo) {
         try {
-            // ExportadorPDF.exportarReporte(rutaArchivo, reporte);
-            // Nota: Requiere librerías iText PDF
+            reporte.exportarPDF(rutaArchivo);
             return true;
         } catch (Exception e) {
             e.printStackTrace();
@@ -281,9 +258,7 @@ public class ControladorJefaDepartamento {
      * NUEVO: Obtiene información sobre proyectos activos
      */
     public List<Proyectos> obtenerProyectosActivos() {
-        return proyectoDAO.listarTodos().stream()
-            .filter(p -> "ACTIVO".equals(p.getEstado()))
-            .collect(java.util.stream.Collectors.toList());
+        return Proyectos.filtrarActivos(proyectoDAO.listarTodos());
     }
 
     /**
@@ -300,5 +275,76 @@ public class ControladorJefaDepartamento {
     public long contarAyudantesInactivos() {
         List<Ayudante> todos = ayudanteDAO.listarTodos();
         return ServicioDeEstadisticas.contarInactivos(todos);
+    }
+
+    /**
+     * NUEVO: Obtiene proyecto por código
+     */
+    public Proyectos obtenerProyectoPorCodigo(String codigo) {
+        return proyectoDAO.buscarPorCodigo(codigo);
+    }
+
+    /**
+     * NUEVO: Obtiene nombre del director
+     */
+    public String obtenerNombreDirector(String codigoDirector) {
+        // Este método requerirá acceso a MiembroEPN DAO
+        // Por ahora retorna el código
+        return codigoDirector != null ? codigoDirector : "Sin asignar";
+    }
+
+    /**
+     * NUEVO: Cuenta personal por proyecto (ayudantes, asistentes, técnicos)
+     */
+    public Map<String, Integer> contarPersonalPorProyecto(String codigoProyecto) {
+        Map<String, Integer> conteo = new HashMap<>();
+        
+        // Contar ayudantes
+        List<Ayudante> ayudantes = ayudanteDAO.buscarPorProyecto(codigoProyecto);
+        conteo.put("ayudantes", ayudantes.size());
+        
+        // Los asistentes y técnicos requieren DAOs adicionales
+        // Por ahora los dejamos en 0
+        conteo.put("asistentes", 0);
+        conteo.put("tecnicos", 0);
+        
+        return conteo;
+    }
+
+    /**
+     * NUEVO: Obtiene ayudantes de un proyecto
+     */
+    public List<Ayudante> obtenerAyudantesProyecto(String codigoProyecto) {
+        return ayudanteDAO.buscarPorProyecto(codigoProyecto);
+    }
+
+    /**
+     * NUEVO: Obtiene asistentes de un proyecto
+     */
+    public List<AsistenteInvestigacion> obtenerAsistentesProyecto(String codigoProyecto) {
+        List<AsistenteInvestigacion> todos = asistenteDAO.listarTodos();
+        List<AsistenteInvestigacion> resultado = new java.util.ArrayList<>();
+        for (AsistenteInvestigacion a : todos) {
+            if (a.getProyectoAsignado() != null && 
+                a.getProyectoAsignado().getCodigoProyecto().equals(codigoProyecto)) {
+                resultado.add(a);
+            }
+        }
+        return resultado;
+    }
+
+    /**
+     * NUEVO: Obtiene técnicos de un proyecto
+     */
+    public List<TecnicoInvestigacion> obtenerTecnicosProyecto(String codigoProyecto) {
+        List<TecnicoInvestigacion> todos = tecnicoDAO.listarTodos();
+        List<TecnicoInvestigacion> resultado = new java.util.ArrayList<>();
+        for (TecnicoInvestigacion t : todos) {
+            if (t.getProyectoAsignado() != null && 
+                t.getProyectoAsignado().getCodigoProyecto().equals(codigoProyecto)) {
+                resultado.add(t);
+            }
+        }
+        return resultado;
     }
 }

@@ -28,7 +28,7 @@ public class DialogoFormularioAyudante extends JDialog {
     private JTextField txtNivel;
     private JTextField txtIra;
     private JTextField txtHoras;
-    private JTextField txtSalario;
+    private JTextField txtMeses;
     private StyledButton btnBuscar;
     private StyledButton btnGuardar;
     private StyledButton btnCancelar;
@@ -102,7 +102,7 @@ public class DialogoFormularioAyudante extends JDialog {
         addField(form, gbc, "Nivel", txtNivel = buildReadOnly());
         addField(form, gbc, "IRA", txtIra = buildReadOnly());
         addField(form, gbc, "Horas semanales (máx 32)", txtHoras = new JTextField());
-        addField(form, gbc, "Salario mensual", txtSalario = new JTextField());
+        addField(form, gbc, "Meses Contratados", txtMeses = new JTextField());
 
         return form;
     }
@@ -217,6 +217,8 @@ public class DialogoFormularioAyudante extends JDialog {
         txtCarrera.setText("");
         txtNivel.setText("");
         txtIra.setText("");
+        txtHoras.setText("");
+        txtMeses.setText("");
     }
 
     private void guardar() {
@@ -232,24 +234,22 @@ public class DialogoFormularioAyudante extends JDialog {
         int horas = 0;
         try {
             horas = Integer.parseInt(txtHoras.getText().trim());
-            if (horas <= 0 || horas > 30) {
-                errores.add("Las horas semanales deben estar entre 1 y 30");
+            if (horas <= 0 || horas > 32) {
+                errores.add("Las horas semanales deben estar entre 1 y 32");
             }
         } catch (NumberFormatException e) {
             errores.add("Horas semanales inválidas (debe ser un número entero)");
         }
         
-        // Validar salario
-        double salario = 0;
+        // Validar meses
+        int meses = 0;
         try {
-            salario = Double.parseDouble(txtSalario.getText().trim());
-            if (salario <= 0) {
-                errores.add("El salario mensual debe ser mayor a 0");
-            } else if (salario > 10000) {
-                errores.add("El salario mensual parece excesivo (máximo 10,000)");
+            meses = Integer.parseInt(txtMeses.getText().trim());
+            if (meses <= 0 || meses > 12) {
+                errores.add("Los meses deben estar entre 1 y 12");
             }
         } catch (NumberFormatException e) {
-            errores.add("Salario mensual inválido (debe ser un número)");
+            errores.add("Meses inválidos (debe ser un número entero)");
         }
         
         if (!errores.isEmpty()) {
@@ -262,7 +262,7 @@ public class DialogoFormularioAyudante extends JDialog {
             return;
         }
         
-        ResultadoOperacion res = controlador.registrarAyudante(estudianteSeleccionado.getCodigoUnico(), horas, salario);
+        ResultadoOperacion res = controlador.registrarAyudante(estudianteSeleccionado.getCodigoUnico(), horas, meses);
         if (res.esExitoso()) {
             JOptionPane.showMessageDialog(this, res.getMensaje(), "Éxito", JOptionPane.INFORMATION_MESSAGE);
             guardado = true;
@@ -283,21 +283,21 @@ public class DialogoFormularioAyudante extends JDialog {
         // Validar horas
         try {
             int horas = Integer.parseInt(txtHoras.getText().trim());
-            if (horas <= 0 || horas > 30) {
-                errores.add("Las horas semanales deben estar entre 1 y 30");
+            if (horas <= 0 || horas > 32) {
+                errores.add("Las horas semanales deben estar entre 1 y 32");
             }
         } catch (NumberFormatException e) {
             errores.add("Horas semanales inválidas (debe ser un número entero)");
         }
         
-        // Validar salario
+        // Validar meses
         try {
-            double salario = Double.parseDouble(txtSalario.getText().trim());
-            if (salario <= 0) {
-                errores.add("El salario mensual debe ser mayor a 0");
+            int meses = Integer.parseInt(txtMeses.getText().trim());
+            if (meses <= 0 || meses > 12) {
+                errores.add("Los meses deben estar entre 1 y 12");
             }
         } catch (NumberFormatException e) {
-            errores.add("Salario mensual inválido (debe ser un número)");
+            errores.add("Meses inválidos (debe ser un número entero)");
         }
         
         if (!errores.isEmpty()) {

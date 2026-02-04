@@ -11,12 +11,8 @@ public class TecnicoInvestigacion {
     private String apellidos;
     private String telefono;
 
-    private String especialidadTecnica;
-    private int aniosExperiencia;
-    private String empresaOrigen;
-
     private int horasSemanales;
-    private double salarioMensual;
+    private int mesesContratados;
 
     private String estado;
     private Date fechaRegistro;
@@ -36,9 +32,8 @@ public class TecnicoInvestigacion {
 
     public TecnicoInvestigacion(String idTecnico, String cedula, String correoElectronico,
                                 String nombres, String apellidos, String telefono,
-                                String especialidadTecnica, int aniosExperiencia,
-                                String empresaOrigen, int horasSemanales,
-                                double salarioMensual, Proyectos proyectoAsignado) {
+                                int horasSemanales, int mesesContratados,
+                                Proyectos proyectoAsignado) {
 
         this.idTecnico = idTecnico;
         this.cedula = cedula;
@@ -46,11 +41,8 @@ public class TecnicoInvestigacion {
         this.nombres = nombres;
         this.apellidos = apellidos;
         this.telefono = telefono;
-        this.especialidadTecnica = especialidadTecnica;
-        this.aniosExperiencia = aniosExperiencia;
-        this.empresaOrigen = empresaOrigen;
         this.horasSemanales = horasSemanales;
-        this.salarioMensual = salarioMensual;
+        this.mesesContratados = mesesContratados;
         this.proyectoAsignado = proyectoAsignado;
 
         this.estado = "ACTIVO";
@@ -109,30 +101,6 @@ public class TecnicoInvestigacion {
         this.telefono = telefono;
     }
 
-    public String getEspecialidadTecnica() {
-        return especialidadTecnica;
-    }
-
-    public void setEspecialidadTecnica(String especialidadTecnica) {
-        this.especialidadTecnica = especialidadTecnica;
-    }
-
-    public int getAniosExperiencia() {
-        return aniosExperiencia;
-    }
-
-    public void setAniosExperiencia(int aniosExperiencia) {
-        this.aniosExperiencia = aniosExperiencia;
-    }
-
-    public String getEmpresaOrigen() {
-        return empresaOrigen;
-    }
-
-    public void setEmpresaOrigen(String empresaOrigen) {
-        this.empresaOrigen = empresaOrigen;
-    }
-
     public int getHorasSemanales() {
         return horasSemanales;
     }
@@ -141,12 +109,12 @@ public class TecnicoInvestigacion {
         this.horasSemanales = horasSemanales;
     }
 
-    public double getSalarioMensual() {
-        return salarioMensual;
+    public int getMesesContratados() {
+        return mesesContratados;
     }
 
-    public void setSalarioMensual(double salarioMensual) {
-        this.salarioMensual = salarioMensual;
+    public void setMesesContratados(int mesesContratados) {
+        this.mesesContratados = mesesContratados;
     }
 
     public String getEstado() {

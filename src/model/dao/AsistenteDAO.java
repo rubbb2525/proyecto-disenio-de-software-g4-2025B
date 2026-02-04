@@ -27,10 +27,9 @@ public class AsistenteDAO implements IDAO<AsistenteInvestigacion> {
                 codigo_unico, cedula, correo_institucional,
                 nombres, apellidos, telefono,
                 carrera, nivel, ira,
-                titulo_academico, area_especializacion,
-                horas_semanales, salario_mensual,
+                horas_semanales, meses_contratados,
                 estado, fecha_registro, codigo_proyecto
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
 
         try (PreparedStatement ps = conexion.prepareStatement(sql)) {
@@ -43,13 +42,11 @@ public class AsistenteDAO implements IDAO<AsistenteInvestigacion> {
             ps.setString(7, asistente.getCarrera());
             ps.setInt(8, asistente.getNivel());
             ps.setFloat(9, asistente.getIRA());
-            ps.setString(10, asistente.getTituloAcademico());
-            ps.setString(11, asistente.getAreaEspecializacion());
-            ps.setInt(12, asistente.getHorasSemanales());
-            ps.setDouble(13, asistente.getSalarioMensual());
-            ps.setString(14, "ACTIVO");
-            ps.setTimestamp(15, new Timestamp(asistente.getFechaRegistro().getTime()));
-            ps.setString(16,
+            ps.setInt(10, asistente.getHorasSemanales());
+            ps.setInt(11, asistente.getMesesContratados());
+            ps.setString(12, "ACTIVO");
+            ps.setTimestamp(13, new Timestamp(asistente.getFechaRegistro().getTime()));
+            ps.setString(14,
                     asistente.getProyectoAsignado() != null
                             ? asistente.getProyectoAsignado().getCodigoProyecto()
                             : null);
@@ -114,22 +111,19 @@ public class AsistenteDAO implements IDAO<AsistenteInvestigacion> {
     public boolean actualizar(AsistenteInvestigacion a) {
         String sql = """
             UPDATE asistentes SET
-            titulo_academico = ?, area_especializacion = ?,
-            horas_semanales = ?, salario_mensual = ?, 
+            horas_semanales = ?, meses_contratados = ?, 
             estado = ?, fecha_finalizacion = ?, motivo_salida = ?
             WHERE codigo_unico = ?
         """;
 
         try (PreparedStatement ps = conexion.prepareStatement(sql)) {
-            ps.setString(1, a.getTituloAcademico());
-            ps.setString(2, a.getAreaEspecializacion());
-            ps.setInt(3, a.getHorasSemanales());
-            ps.setDouble(4, a.getSalarioMensual());
-            ps.setString(5, a.getEstado());
-            ps.setTimestamp(6, a.getFechaFinalizacion() != null 
+            ps.setInt(1, a.getHorasSemanales());
+            ps.setInt(2, a.getMesesContratados());
+            ps.setString(3, a.getEstado());
+            ps.setTimestamp(4, a.getFechaFinalizacion() != null 
                 ? new Timestamp(a.getFechaFinalizacion().getTime()) : null);
-            ps.setString(7, a.getMotivoSalida());
-            ps.setString(8, a.getCodigoUnico());
+            ps.setString(5, a.getMotivoSalida());
+            ps.setString(6, a.getCodigoUnico());
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             System.out.println("Error al actualizar asistente: " + e.getMessage());
@@ -176,10 +170,8 @@ public class AsistenteDAO implements IDAO<AsistenteInvestigacion> {
         a.setCarrera(rs.getString("carrera"));
         a.setNivel(rs.getInt("nivel"));
         a.setIRA(rs.getFloat("ira"));
-        a.setTituloAcademico(rs.getString("titulo_academico"));
-        a.setAreaEspecializacion(rs.getString("area_especializacion"));
         a.setHorasSemanales(rs.getInt("horas_semanales"));
-        a.setSalarioMensual(rs.getDouble("salario_mensual"));
+        a.setMesesContratados(rs.getInt("meses_contratados"));
         a.setEstado(rs.getString("estado"));
         
         if (rs.getTimestamp("fecha_registro") != null) {

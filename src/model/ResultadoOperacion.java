@@ -61,4 +61,50 @@ public class ResultadoOperacion {
         }
         return sb.toString();
     }
+
+    // ============ FACTORY METHODS ============
+
+    /**
+     * Crea un resultado exitoso
+     */
+    public static ResultadoOperacion exitoso(String mensaje) {
+        ResultadoOperacion resultado = new ResultadoOperacion();
+        resultado.setExitoso(true);
+        resultado.setMensaje(mensaje);
+        return resultado;
+    }
+
+    /**
+     * Crea un resultado fallido
+     */
+    public static ResultadoOperacion fallido(String mensaje, String... errores) {
+        ResultadoOperacion resultado = new ResultadoOperacion();
+        resultado.setExitoso(false);
+        resultado.setMensaje(mensaje);
+        for (String error : errores) {
+            resultado.agregarError(error);
+        }
+        return resultado;
+    }
+
+    /**
+     * Crea un resultado de entidad no encontrada
+     */
+    public static ResultadoOperacion noEncontrado(String entidad, String criterio) {
+        return fallido(entidad + " no encontrado", criterio + " inválido");
+    }
+
+    /**
+     * Crea un resultado de error de persistencia
+     */
+    public static ResultadoOperacion errorPersistencia(String operacion) {
+        return fallido("Error al " + operacion + " en la base de datos", "Error de persistencia");
+    }
+
+    /**
+     * Crea un resultado de validación fallida
+     */
+    public static ResultadoOperacion validacionFallida(String mensaje, String... errores) {
+        return fallido(mensaje, errores);
+    }
 }

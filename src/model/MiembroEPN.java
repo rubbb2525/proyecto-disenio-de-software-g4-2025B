@@ -1,7 +1,5 @@
 package model;
 
-import java.util.Date;
-
 /**
  * Clase base abstracta que representa a todos los miembros de la FIS-EPN
  */
@@ -43,6 +41,26 @@ public abstract class MiembroEPN {
 
     public boolean esActivo() {
         return "ACTIVO".equals(estado);
+    }
+
+    /**
+     * Devuelve un resumen del miembro
+     */
+    public String obtenerResumen() {
+        return String.format(
+            "Usuario: %s | Rol: %s | Correo: %s | Estado: %s",
+            getNombresCompletos(),
+            getRol(),
+            getCorreoInstitucional(),
+            getEstado()
+        );
+    }
+
+    /**
+     * Valida el formato básico de correo
+     */
+    public static boolean esCorreoValido(String correo) {
+        return correo != null && correo.contains("@") && correo.contains(".");
     }
 
     // Getters y Setters

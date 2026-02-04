@@ -12,7 +12,7 @@ import java.util.Map;
  * Realizar cálculos estadísticos sobre listas de ayudantes
  * 
  * Este servicio es REUTILIZABLE en múltiples contextos:
- * - GeneradorReportes lo usa
+ * - JefaDepartamento lo usa
  * - Vistas pueden usarlo para mostrar dashboards
  * - APIs pueden usarlo para endpoints
  */
@@ -33,7 +33,8 @@ public class ServicioDeEstadisticas {
             stats.put("inactivos", 0);
             stats.put("promedioIRA", 0.0);
             stats.put("promedioHoras", 0.0);
-            stats.put("salarioPromedio", 0.0);
+            stats.put("mesesPromedio", 0.0);
+            stats.put("costoTotal", 0.0);
             return stats;
         }
         
@@ -57,9 +58,13 @@ public class ServicioDeEstadisticas {
         double promedioHoras = calcularPromedioHoras(ayudantes);
         stats.put("promedioHoras", promedioHoras);
         
-        // Calcular salario promedio
-        double salarioPromedio = calcularSalarioPromedio(ayudantes);
-        stats.put("salarioPromedio", salarioPromedio);
+        // Calcular promedio meses
+        double mesesPromedio = calcularMesesPromedio(ayudantes);
+        stats.put("mesesPromedio", mesesPromedio);
+        
+        // Calcular costo total
+        double costoTotal = calcularCostoTotal(ayudantes);
+        stats.put("costoTotal", costoTotal);
         
         // Porcentaje de activos
         double porcentajeActivos = (activos / (double) total) * 100;
@@ -103,35 +108,35 @@ public class ServicioDeEstadisticas {
     }
     
     /**
-     * Calcula el salario promedio mensual
+     * Calcula el promedio de meses contratados
      * 
      * @param ayudantes Lista de ayudantes
-     * @return Salario promedio
+     * @return Promedio de meses
      */
-    public static double calcularSalarioPromedio(List<Ayudante> ayudantes) {
+    public static double calcularMesesPromedio(List<Ayudante> ayudantes) {
         if (ayudantes == null || ayudantes.isEmpty()) {
             return 0.0;
         }
         
         return ayudantes.stream()
-                .mapToDouble(Ayudante::getSalarioMensual)
+                .mapToInt(Ayudante::getMesesContratados)
                 .average()
                 .orElse(0.0);
     }
     
     /**
-     * Calcula el total de salarios
+     * Calcula el costo total de todos los ayudantes
      * 
      * @param ayudantes Lista de ayudantes
-     * @return Suma total de salarios mensuales
+     * @return Suma total de costos
      */
-    public static double calcularSalarioTotal(List<Ayudante> ayudantes) {
+    public static double calcularCostoTotal(List<Ayudante> ayudantes) {
         if (ayudantes == null || ayudantes.isEmpty()) {
             return 0.0;
         }
         
         return ayudantes.stream()
-                .mapToDouble(Ayudante::getSalarioMensual)
+                .mapToDouble(Ayudante::calcularCostoTotal)
                 .sum();
     }
     

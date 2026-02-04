@@ -157,7 +157,6 @@ public class App {
         
         // Mostrar vista
         vistaJefa = new VistaJefaDepartamento(ctrlJefa);
-        vistaJefa.refrescar(); // Inicializar contador de notificaciones
         vistaJefa.setVisible(true);
     }
 }

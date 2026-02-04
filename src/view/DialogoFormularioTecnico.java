@@ -24,11 +24,8 @@ public class DialogoFormularioTecnico extends JDialog {
     private JTextField txtCedula;
     private JTextField txtTelefono;
     private JTextField txtCorreo;
-    private JTextField txtEspecialidad;
-    private JTextField txtExperiencia;
-    private JTextField txtEmpresa;
     private JTextField txtHoras;
-    private JTextField txtSalario;
+    private JTextField txtMeses;
     private StyledButton btnGuardar;
     private StyledButton btnCancelar;
 
@@ -82,17 +79,10 @@ public class DialogoFormularioTecnico extends JDialog {
             {new JLabel("Correo Electrónico:*"), txtCorreo = crearCampo()}
         }));
 
-        // Datos profesionales
-        panel.add(crearSeccion("Datos Profesionales", new JComponent[][]{
-            {new JLabel("Especialidad Técnica:*"), txtEspecialidad = crearCampo()},
-            {new JLabel("Años de Experiencia:*"), txtExperiencia = crearCampo()},
-            {new JLabel("Empresa/Organización:"), txtEmpresa = crearCampo()}
-        }));
-
         // Datos contractuales
         panel.add(crearSeccion("Datos Contractuales", new JComponent[][]{
             {new JLabel("Horas Semanales (máx 40):*"), txtHoras = crearCampo()},
-            {new JLabel("Salario Mensual:*"), txtSalario = crearCampo()}
+            {new JLabel("Meses Contratados:*"), txtMeses = crearCampo()}
         }));
 
         return panel;
@@ -170,20 +160,6 @@ public class DialogoFormularioTecnico extends JDialog {
         } else if (!txtCorreo.getText().trim().contains("@")) {
             errores.add("El correo electrónico debe ser válido");
         }
-        if (txtEspecialidad.getText().trim().isEmpty()) {
-            errores.add("El campo Especialidad Técnica es obligatorio");
-        }
-        
-        // Validar años de experiencia
-        int experiencia = 0;
-        try {
-            experiencia = Integer.parseInt(txtExperiencia.getText().trim());
-            if (experiencia < 0 || experiencia > 50) {
-                errores.add("Los años de experiencia deben estar entre 0 y 50");
-            }
-        } catch (NumberFormatException e) {
-            errores.add("Años de experiencia inválidos (debe ser un número entero)");
-        }
         
         // Validar horas
         int horas = 0;
@@ -196,15 +172,15 @@ public class DialogoFormularioTecnico extends JDialog {
             errores.add("Horas semanales inválidas (debe ser un número entero)");
         }
         
-        // Validar salario
-        double salario = 0;
+        // Validar meses
+        int meses = 0;
         try {
-            salario = Double.parseDouble(txtSalario.getText().trim());
-            if (salario <= 0) {
-                errores.add("El salario mensual debe ser mayor a 0");
+            meses = Integer.parseInt(txtMeses.getText().trim());
+            if (meses <= 0 || meses > 12) {
+                errores.add("Los meses deben estar entre 1 y 12");
             }
         } catch (NumberFormatException e) {
-            errores.add("Salario mensual inválido (debe ser un número)");
+            errores.add("Meses inválidos (debe ser un número entero)");
         }
         
         if (!errores.isEmpty()) {
@@ -229,12 +205,9 @@ public class DialogoFormularioTecnico extends JDialog {
         tecnico.setNombres(txtNombres.getText().trim());
         tecnico.setApellidos(txtApellidos.getText().trim());
         tecnico.setTelefono(txtTelefono.getText().trim());
-        tecnico.setCorreoElectronico(txtCorreo.getText().trim());
-        tecnico.setEspecialidadTecnica(txtEspecialidad.getText().trim());
-        tecnico.setAniosExperiencia(experiencia);
-        tecnico.setEmpresaOrigen(txtEmpresa.getText().trim());
+        tecnico.setCorreoElectronico(generarCorreoTecnico(txtNombres.getText(), txtApellidos.getText()));
         tecnico.setHorasSemanales(horas);
-        tecnico.setSalarioMensual(salario);
+        tecnico.setMesesContratados(meses);
         tecnico.setEstado("ACTIVO");
         // NO llamar a setFechaRegistro() - ya se establece en el constructor
         
@@ -250,6 +223,15 @@ public class DialogoFormularioTecnico extends JDialog {
         } else {
             JOptionPane.showMessageDialog(this, res.getMensaje(), "Error", JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    /**
+     * Genera el correo electrónico del técnico en formato: nombre.apellido@epn.edu.ec
+     */
+    private String generarCorreoTecnico(String nombres, String apellidos) {
+        String nombre = nombres.trim().toLowerCase().split("\\s+")[0];
+        String apellido = apellidos.trim().toLowerCase().split("\\s+")[0];
+        return nombre + "." + apellido + "@epn.edu.ec";
     }
 
     public boolean seGuardo() {

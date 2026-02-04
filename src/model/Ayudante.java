@@ -1,6 +1,8 @@
 package model;
 
 import java.util.Date;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Representa un ayudante de investigación
@@ -14,20 +16,20 @@ public class Ayudante extends MiembroEPN {
     private String motivoSalida;
     private Proyectos proyectoAsignado;
     private int horasSemanales;
-    private double salarioMensual;
+    private int mesesContratados;
 
     public Ayudante() {
     }
 
     public Ayudante(String codigoUnico, String cedula, String correoInstitucional,
                    String nombres, String apellidos, String telefono,
-                   String carrera, int nivel, float ira, int horasSemanales, double salarioMensual) {
+                   String carrera, int nivel, float ira, int horasSemanales, int mesesContratados) {
         super(codigoUnico, cedula, correoInstitucional, "N/A", nombres, apellidos, telefono, "AYUDANTE", "ACTIVO");
         this.carrera = carrera;
         this.nivel = nivel;
         this.ira = ira;
         this.horasSemanales = horasSemanales;
-        this.salarioMensual = salarioMensual;
+        this.mesesContratados = mesesContratados;
         this.fechaRegistro = new Date();
     }
 
@@ -40,25 +42,54 @@ public class Ayudante extends MiembroEPN {
     }
 
     /**
-     * Da de baja el ayudante
+     * Da de baja el ayudante con validación
      */
-    public void darDeBaja(String motivo, Date fecha) {
+    public ResultadoOperacion darDeBaja(String motivo, Date fecha) {
+        ResultadoOperacion resultado = new ResultadoOperacion();
+
+        // Validar que no esté ya dado de baja
+        if (!esActivo()) {
+            resultado.setMensaje("El ayudante ya está inactivo");
+            resultado.agregarError("Estado inválido");
+            return resultado;
+        }
+
+        // Validar motivo
+        if (motivo == null || motivo.trim().isEmpty()) {
+            resultado.setMensaje("El motivo de baja es obligatorio");
+            resultado.agregarError("Motivo vacío");
+            return resultado;
+        }
+
+        // Validar fecha
+        if (fecha == null) {
+            resultado.setMensaje("La fecha de baja es obligatoria");
+            resultado.agregarError("Fecha nula");
+            return resultado;
+        }
+
+        if (fecha.before(fechaRegistro)) {
+            resultado.setMensaje("La fecha de baja no puede ser anterior a la fecha de registro");
+            resultado.agregarError("Fecha inválida");
+            return resultado;
+        }
+
+        // Aplicar baja
         this.estado = "INACTIVO";
         this.motivoSalida = motivo;
         this.fechaFinalizacion = fecha;
+
+        resultado.setExitoso(true);
+        resultado.setMensaje("Ayudante dado de baja exitosamente");
+        return resultado;
     }
 
     /**
-     * Calcula el salario total basado en horas semanales y número de semanas
+     * Calcula el costo total estimado basado en meses contratados
      */
-    public double calcularSalarioTotal() {
-        if (fechaFinalizacion == null) {
-            // Si aún está activo, calcular hasta hoy
-            fechaFinalizacion = new Date();
-        }
-        long diferenciaTiempo = fechaFinalizacion.getTime() - fechaRegistro.getTime();
-        long semanas = diferenciaTiempo / (1000 * 60 * 60 * 24 * 7);
-        return salarioMensual * semanas / 4.33; // Aproximadamente 4.33 semanas por mes
+    public double calcularCostoTotal() {
+        // Estimación: horas_semanales * semanas_por_mes * meses_contratados * valor_hora
+        return horasSemanales * 4.33 * mesesContratados * 5.0; // 5.0 es valor estimado por hora
     }
 
     // Getters y Setters
@@ -129,11 +160,114 @@ public class Ayudante extends MiembroEPN {
         this.horasSemanales = horasSemanales;
     }
 
-    public double getSalarioMensual() {
-        return salarioMensual;
+    public int getMesesContratados() {
+        return mesesContratados;
     }
 
-    public void setSalarioMensual(double salarioMensual) {
-        this.salarioMensual = salarioMensual;
+    public void setMesesContratados(int mesesContratados) {
+        this.mesesContratados = mesesContratados;
+    }
+
+    // ============ MÉTODOS DE FILTRADO ESTÁTICOS ============
+
+    /**
+     * Filtra ayudantes según criterios
+     */
+    public static List<Ayudante> filtrar(List<Ayudante> ayudantes, Map<String, Object> filtros) {
+        if (ayudantes == null || ayudantes.isEmpty()) {
+            return List.of();
+        }
+        
+        if (filtros == null || filtros.isEmpty()) {
+            return ayudantes;
+        }
+        
+        return ayudantes.stream()
+                .filter(a -> cumpleTodosCriterios(a, filtros))
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    private static boolean cumpleTodosCriterios(Ayudante ayudante, Map<String, Object> filtros) {
+        // Filtro por proyecto
+        if (filtros.containsKey("proyecto")) {
+            String codigoProyecto = (String) filtros.get("proyecto");
+            if (ayudante.getProyectoAsignado() == null ||
+                !ayudante.getProyectoAsignado().getCodigoProyecto().equals(codigoProyecto)) {
+                return false;
+            }
+        }
+        
+        // Filtro por carrera
+        if (filtros.containsKey("carrera")) {
+            String carrera = (String) filtros.get("carrera");
+            if (!carrera.equals(ayudante.getCarrera())) {
+                return false;
+            }
+        }
+        
+        // Filtro por nivel
+        if (filtros.containsKey("nivel")) {
+            Integer nivel = (Integer) filtros.get("nivel");
+            if (ayudante.getNivel() != nivel) {
+                return false;
+            }
+        }
+        
+        // Filtro por estado
+        if (filtros.containsKey("estado")) {
+            String estado = (String) filtros.get("estado");
+            if ("Activos".equals(estado) && !ayudante.esActivo()) return false;
+            if ("Inactivos".equals(estado) && ayudante.esActivo()) return false;
+        }
+        
+        // Filtro por IRA
+        if (filtros.containsKey("ira_minimo")) {
+            Float iraMinimo = (Float) filtros.get("ira_minimo");
+            if (ayudante.getIRA() < iraMinimo) {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+
+    /**
+     * Filtra ayudantes activos
+     */
+    public static List<Ayudante> obtenerActivos(List<Ayudante> ayudantes) {
+        if (ayudantes == null) return List.of();
+        return ayudantes.stream()
+                .filter(Ayudante::esActivo)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    /**
+     * Filtra ayudantes inactivos
+     */
+    public static List<Ayudante> obtenerInactivos(List<Ayudante> ayudantes) {
+        if (ayudantes == null) return List.of();
+        return ayudantes.stream()
+                .filter(a -> !a.esActivo())
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    /**
+     * Filtra por carrera
+     */
+    public static List<Ayudante> porCarrera(List<Ayudante> ayudantes, String carrera) {
+        if (ayudantes == null || carrera == null) return List.of();
+        return ayudantes.stream()
+                .filter(a -> carrera.equals(a.getCarrera()))
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    /**
+     * Filtra por nivel
+     */
+    public static List<Ayudante> porNivel(List<Ayudante> ayudantes, int nivel) {
+        if (ayudantes == null) return List.of();
+        return ayudantes.stream()
+                .filter(a -> a.getNivel() == nivel)
+                .collect(java.util.stream.Collectors.toList());
     }
 }

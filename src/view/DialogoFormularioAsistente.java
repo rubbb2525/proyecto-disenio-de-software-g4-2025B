@@ -29,11 +29,8 @@ public class DialogoFormularioAsistente extends JDialog {
     private JTextField txtIra;
     
     // CAMPOS ADICIONALES PARA ASISTENTE
-    private JTextField txtTituloAcademico;
-    private JTextField txtAreaEspecializacion;
-    
     private JTextField txtHoras;
-    private JTextField txtSalario;
+    private JTextField txtMeses;
     private StyledButton btnBuscar;
     private StyledButton btnGuardar;
     private StyledButton btnCancelar;
@@ -110,16 +107,10 @@ public class DialogoFormularioAsistente extends JDialog {
             {new JLabel("IRA:"), txtIra = crearCampo(false)}
         }));
 
-        // CAMPOS ADICIONALES PARA ASISTENTE
-        panel.add(crearSeccion("Información Profesional (Asistente)", new JComponent[][]{
-            {new JLabel("Título Académico:*"), txtTituloAcademico = crearCampo(true)},
-            {new JLabel("Área de Especialización:*"), txtAreaEspecializacion = crearCampo(true)}
-        }));
-
         // Información laboral
         panel.add(crearSeccion("Información Laboral", new JComponent[][]{
             {new JLabel("Horas Semanales (máx 32):*"), txtHoras = crearCampo(true)},
-            {new JLabel("Salario Mensual:*"), txtSalario = crearCampo(true)}
+            {new JLabel("Meses Contratados:*"), txtMeses = crearCampo(true)}
         }));
 
         return panel;
@@ -238,8 +229,6 @@ public class DialogoFormularioAsistente extends JDialog {
         txtCarrera.setText("");
         txtNivel.setText("");
         txtIra.setText("");
-        txtTituloAcademico.setText("");
-        txtAreaEspecializacion.setText("");
         estudianteSeleccionado = null;
     }
 
@@ -248,17 +237,6 @@ public class DialogoFormularioAsistente extends JDialog {
 
         if (estudianteSeleccionado == null) {
             errores.add("Debe buscar y seleccionar un estudiante primero");
-        }
-
-        // VALIDAR CAMPOS ADICIONALES
-        String tituloAcademico = txtTituloAcademico.getText().trim();
-        if (tituloAcademico.isEmpty()) {
-            errores.add("El título académico es obligatorio");
-        }
-
-        String areaEspecializacion = txtAreaEspecializacion.getText().trim();
-        if (areaEspecializacion.isEmpty()) {
-            errores.add("El área de especialización es obligatoria");
         }
 
         int horas = 0;
@@ -271,14 +249,14 @@ public class DialogoFormularioAsistente extends JDialog {
             errores.add("Horas inválidas");
         }
 
-        double salario = 0;
+        int meses = 0;
         try {
-            salario = Double.parseDouble(txtSalario.getText().trim());
-            if (salario <= 0) {
-                errores.add("El salario debe ser mayor a 0");
+            meses = Integer.parseInt(txtMeses.getText().trim());
+            if (meses <= 0 || meses > 12) {
+                errores.add("Los meses deben estar entre 1 y 12");
             }
         } catch (NumberFormatException ex) {
-            errores.add("Salario inválido");
+            errores.add("Meses inválidos");
         }
         
         if (!errores.isEmpty()) {
@@ -293,9 +271,7 @@ public class DialogoFormularioAsistente extends JDialog {
         ResultadoOperacion res = controlador.registrarAsistente(
             estudianteSeleccionado.getCodigoUnico(), 
             horas, 
-            salario,
-            tituloAcademico,
-            areaEspecializacion
+            meses
         );
         
         if (res.esExitoso()) {

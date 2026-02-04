@@ -31,6 +31,31 @@ public class Director extends MiembroEPN {
     }
 
     /**
+     * Valida si el director puede crear un nuevo proyecto
+     */
+    public ResultadoOperacion validarCreacionProyecto(Proyectos proyectoExistente) {
+        ResultadoOperacion resultado = new ResultadoOperacion();
+
+        // Validar que el director esté activo
+        if (!puedeDirigirProyecto()) {
+            resultado.setMensaje("Director no está habilitado para dirigir proyectos");
+            resultado.agregarError("Estado inválido o código faltante");
+            return resultado;
+        }
+
+        // Validar que no tenga ya un proyecto activo
+        if (proyectoExistente != null && "ACTIVO".equals(proyectoExistente.getEstado())) {
+            resultado.setMensaje("El director ya tiene un proyecto activo");
+            resultado.agregarError("No se puede crear más de un proyecto activo simultáneamente");
+            return resultado;
+        }
+
+        resultado.setExitoso(true);
+        resultado.setMensaje("El director puede crear un proyecto");
+        return resultado;
+    }
+
+    /**
      * Obtiene el nombre completo del director
      */
     @Override

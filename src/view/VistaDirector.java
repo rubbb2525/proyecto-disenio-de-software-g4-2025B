@@ -12,21 +12,25 @@ import view.componentes.RoundedBorder;
 import view.componentes.AdvancedTableModel;
 import view.componentes.ToastMessage;
 import view.componentes.PanelEstadistica;
+import view.componentes.ConstantesVisuales;
 import java.awt.*;
 import java.awt.event.KeyEvent;
+import java.awt.GradientPaint;
 import java.util.Date;
 import model.AsistenteInvestigacion;
 import model.TecnicoInvestigacion;
 
 /**
  * Ventana principal del Director
+ * Requisitos visuales: Usa ConstantesVisuales
  */
 public class VistaDirector extends JFrame {
-    private static final Color COLOR_FONDO = new Color(245, 247, 250);
-    private static final Color COLOR_TARJETA = Color.WHITE;
-    private static final Color COLOR_PRIMARIO = new Color(0, 61, 165);
-    private static final Color COLOR_TEXTO = new Color(44, 62, 80);
-    private static final Color COLOR_BORDE = new Color(225, 232, 237);
+    // Usar constantes visuales estándar
+    private static final Color COLOR_FONDO = ConstantesVisuales.COLOR_FONDO_PRINCIPAL;
+    private static final Color COLOR_TARJETA = ConstantesVisuales.COLOR_TARJETA;
+    private static final Color COLOR_PRIMARIO = ConstantesVisuales.COLOR_PRIMARIO;
+    private static final Color COLOR_TEXTO = ConstantesVisuales.COLOR_TEXTO_PRINCIPAL;
+    private static final Color COLOR_BORDE = ConstantesVisuales.COLOR_BORDE;
 
     private JTable tablaAyudantes;
     private StyledButton btnRegistrar;
@@ -47,7 +51,7 @@ public class VistaDirector extends JFrame {
         this.controlador = controlador;
         setTitle("Sistema Gestión Ayudantes - Director");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(980, 680);
+        setSize(ConstantesVisuales.VENTANA_DASHBOARD);
         setLocationRelativeTo(null);
 
         inicializarComponentes();
@@ -62,129 +66,37 @@ public class VistaDirector extends JFrame {
     private void inicializarComponentes() {
         JPanel panelPrincipal = new JPanel(new BorderLayout());
         panelPrincipal.setBackground(COLOR_FONDO);
-        panelPrincipal.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
+        panelPrincipal.setBorder(BorderFactory.createEmptyBorder(
+            ConstantesVisuales.PADDING_MD, 
+            ConstantesVisuales.PADDING_MD, 
+            ConstantesVisuales.PADDING_MD, 
+            ConstantesVisuales.PADDING_MD
+        ));
 
-        // Header
-        JPanel header = new JPanel(new BorderLayout());
-        header.setBackground(COLOR_PRIMARIO);
-        header.setBorder(BorderFactory.createEmptyBorder(10, 14, 10, 14));
-        JLabel lblTitulo = new JLabel(" Director");
-        lblTitulo.setForeground(Color.WHITE);
-        lblTitulo.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 14));
-        lblTitulo.setIcon(IconManager.getInstance().getIcon("user.svg", 18));
-        header.add(lblTitulo, BorderLayout.WEST);
-
-        JPanel headerRight = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-        headerRight.setOpaque(false);
-        btnRefrescar = new StyledButton("Refrescar", StyledButton.TipoBoton.SECUNDARIO);
-        btnRefrescar.setIcon(IconManager.getInstance().getIcon("refresh.svg", 16));
-        btnRefrescar.setToolTipText("Actualizar datos (F5)");
-        headerRight.add(btnRefrescar);
-        header.add(headerRight, BorderLayout.EAST);
+        // Header con gradiente
+        JPanel header = crearHeader();
 
         // Paneles de estadísticas
-        JPanel panelEstadisticas = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
-        panelEstadisticas.setBackground(COLOR_FONDO);
-        
-        panelTotalAyudantes = new PanelEstadistica("Total Ayudantes", "0", new Color(52, 152, 219), "👥");
-        panelCuposDisponibles = new PanelEstadistica("Cupos Disponibles", "0", new Color(46, 204, 113), "✓");
-        panelHorasTotales = new PanelEstadistica("Horas Semanales", "0", new Color(155, 89, 182), "⏱");
-        
-        panelEstadisticas.add(panelTotalAyudantes);
-        panelEstadisticas.add(panelCuposDisponibles);
-        panelEstadisticas.add(panelHorasTotales);
+        JPanel panelEstadisticas = crearPanelEstadisticas();
 
         // Tarjeta proyecto
-        JPanel cardProyecto = new JPanel();
-        cardProyecto.setLayout(new BoxLayout(cardProyecto, BoxLayout.Y_AXIS));
-        cardProyecto.setBackground(COLOR_TARJETA);
-        cardProyecto.setBorder(BorderFactory.createCompoundBorder(
-            new RoundedBorder(12, COLOR_BORDE, 1),
-            BorderFactory.createEmptyBorder(14, 16, 14, 16)
-        ));
-
-        lblProyecto = new JLabel("Proyecto: Cargando...");
-        lblProyecto.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 13));
-        lblProyecto.setForeground(COLOR_TEXTO);
-
-        lblCuposDisponibles = new JLabel("Cupos disponibles: Cargando...");
-        lblCuposDisponibles.setFont(new java.awt.Font("Arial", java.awt.Font.PLAIN, 12));
-        lblCuposDisponibles.setForeground(new Color(90, 99, 110));
-
-        cardProyecto.add(lblProyecto);
-        cardProyecto.add(Box.createVerticalStrut(6));
-        cardProyecto.add(lblCuposDisponibles);
+        JPanel cardProyecto = crearCardProyecto();
 
         // Tabla
-        String[] columnas = {"Código", "Nombres", "Carrera", "Nivel", "IRA", "Horas", "Salario"};
-        modeloTabla = new AdvancedTableModel(columnas);
-        tablaAyudantes = new JTable(modeloTabla);
-        tablaAyudantes.setRowHeight(28);
-        
-        // Diseño alternado
-        tablaAyudantes.setDefaultRenderer(Object.class, new javax.swing.table.DefaultTableCellRenderer() {
-            @Override
-            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-                if (!isSelected) {
-                    c.setBackground(row % 2 == 0 ? new Color(240, 247, 255) : Color.WHITE);
-                }
-                return c;
-            }
-        });
-        
-        JTableHeader th = tablaAyudantes.getTableHeader();
-        th.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 12));
-        
-        // Barra de búsqueda
-        JPanel panelBusqueda = new JPanel(new BorderLayout(8, 0));
-        panelBusqueda.setBackground(COLOR_FONDO);
-        JLabel lblBuscar = new JLabel("Buscar:");
-        lblBuscar.setFont(new java.awt.Font("Arial", java.awt.Font.PLAIN, 11));
-        campoBusqueda = new JTextField();
-        campoBusqueda.setPreferredSize(new Dimension(250, 35));
-        campoBusqueda.setFont(new java.awt.Font("Arial", java.awt.Font.PLAIN, 11));
-        campoBusqueda.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(COLOR_BORDE, 1),
-            BorderFactory.createEmptyBorder(5, 8, 5, 8)
-        ));
-        campoBusqueda.setToolTipText("Buscar por nombre, código o carrera");
-        panelBusqueda.add(lblBuscar, BorderLayout.WEST);
-        panelBusqueda.add(campoBusqueda, BorderLayout.CENTER);
-        
-        JScrollPane scroll = new JScrollPane(tablaAyudantes);
-        scroll.setBorder(BorderFactory.createCompoundBorder(
-            new RoundedBorder(10, COLOR_BORDE, 1),
-            BorderFactory.createEmptyBorder(4, 4, 4, 4)
-        ));
+        JPanel panelTabla = crearPanelTabla();
 
         // Botonera
-        JPanel acciones = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        acciones.setBackground(COLOR_FONDO);
-        btnRegistrar = new StyledButton("Realizar Contratación", StyledButton.TipoBoton.PRIMARIO);
-        btnRegistrar.setIcon(IconManager.getInstance().getIcon("add.svg", 16));
-        btnRegistrar.setToolTipText("Realizar nueva contratación (Ctrl+N)");
-        btnDarBaja = new StyledButton("Dar de baja", StyledButton.TipoBoton.PELIGRO);
-        btnDarBaja.setIcon(IconManager.getInstance().getIcon("delete.svg", 16));
-        btnDarBaja.setToolTipText("Dar de baja ayudante seleccionado (Supr)");
-        acciones.add(btnRegistrar);
-        acciones.add(btnDarBaja);
-        btnCrearProyecto = new StyledButton("Crear Proyecto", StyledButton.TipoBoton.EXITO);
-        btnCrearProyecto.setIcon(IconManager.getInstance().getIcon("project.svg", 16));
-        btnCrearProyecto.setToolTipText("Crear nuevo proyecto de investigación (Ctrl+P)");
-        acciones.add(btnCrearProyecto);
+        JPanel acciones = crearPanelAcciones();
 
         JPanel centro = new JPanel();
         centro.setBackground(COLOR_FONDO);
         centro.setLayout(new BoxLayout(centro, BoxLayout.Y_AXIS));
         centro.add(panelEstadisticas);
-        centro.add(Box.createVerticalStrut(10));
+        centro.add(Box.createVerticalStrut(ConstantesVisuales.MARGIN_ENTRE_SECCIONES));
         centro.add(cardProyecto);
-        centro.add(Box.createVerticalStrut(10));
-        centro.add(panelBusqueda);
-        centro.add(Box.createVerticalStrut(8));
-        centro.add(scroll);
-        centro.add(Box.createVerticalStrut(10));
+        centro.add(Box.createVerticalStrut(ConstantesVisuales.MARGIN_ENTRE_SECCIONES));
+        centro.add(panelTabla);
+        centro.add(Box.createVerticalStrut(ConstantesVisuales.MARGIN_ENTRE_SECCIONES));
         centro.add(acciones);
 
         panelPrincipal.add(header, BorderLayout.NORTH);
@@ -338,7 +250,7 @@ public class VistaDirector extends JFrame {
                         a.getNivel(),
                         String.format("%.2f", a.getIRA()),
                         a.getHorasSemanales(),
-                        String.format("$%.2f", a.getSalarioMensual())
+                        String.format("$%.2f", a.calcularCostoTotal())
                     };
                     filas.add(fila);
                 }
@@ -373,6 +285,192 @@ public class VistaDirector extends JFrame {
             }
         }
         return null;
+    }
+
+    private JPanel crearHeader() {
+        JPanel header = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, 
+                                     RenderingHints.VALUE_ANTIALIAS_ON);
+                GradientPaint gradient = new GradientPaint(
+                    0, 0, ConstantesVisuales.COLOR_PRIMARIO,
+                    0, getHeight(), ConstantesVisuales.COLOR_PRIMARIO_HOVER
+                );
+                g2d.setPaint(gradient);
+                g2d.fillRect(0, 0, getWidth(), getHeight());
+            }
+        };
+        header.setPreferredSize(new Dimension(0, ConstantesVisuales.ALTURA_HEADER));
+        header.setBorder(BorderFactory.createEmptyBorder(
+            ConstantesVisuales.PADDING_MD, 
+            ConstantesVisuales.PADDING_MD, 
+            ConstantesVisuales.PADDING_MD, 
+            ConstantesVisuales.PADDING_MD
+        ));
+
+        JLabel lblTitulo = new JLabel("👤 Director");
+        lblTitulo.setForeground(Color.WHITE);
+        lblTitulo.setFont(ConstantesVisuales.FUENTE_TITULO);
+        lblTitulo.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JPanel headerLeft = new JPanel();
+        headerLeft.setOpaque(false);
+        headerLeft.add(lblTitulo);
+
+        JPanel headerRight = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        headerRight.setOpaque(false);
+        btnRefrescar = new StyledButton("Refrescar", StyledButton.TipoBoton.SECUNDARIO);
+        btnRefrescar.setToolTipText("Actualizar datos (F5)");
+        headerRight.add(btnRefrescar);
+        
+        header.add(headerLeft, BorderLayout.WEST);
+        header.add(headerRight, BorderLayout.EAST);
+        return header;
+    }
+
+    private JPanel crearPanelEstadisticas() {
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, ConstantesVisuales.PADDING_MD, 0));
+        panel.setBackground(COLOR_FONDO);
+        
+        panelTotalAyudantes = new PanelEstadistica("Total Ayudantes", "0", 
+            ConstantesVisuales.COLOR_INFO, "👥");
+        panelCuposDisponibles = new PanelEstadistica("Cupos Disponibles", "0", 
+            ConstantesVisuales.COLOR_EXITO, "✓");
+        panelHorasTotales = new PanelEstadistica("Horas Semanales", "0", 
+            new Color(155, 89, 182), "⏱");
+        
+        panel.add(panelTotalAyudantes);
+        panel.add(panelCuposDisponibles);
+        panel.add(panelHorasTotales);
+        
+        return panel;
+    }
+
+    private JPanel crearCardProyecto() {
+        JPanel card = new JPanel();
+        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+        card.setBackground(COLOR_TARJETA);
+        card.setBorder(BorderFactory.createCompoundBorder(
+            new RoundedBorder(ConstantesVisuales.RADIO_BORDE_GRANDE, COLOR_BORDE, 1),
+            BorderFactory.createEmptyBorder(
+                ConstantesVisuales.PADDING_MD, 
+                ConstantesVisuales.PADDING_MD, 
+                ConstantesVisuales.PADDING_MD, 
+                ConstantesVisuales.PADDING_MD
+            )
+        ));
+
+        lblProyecto = new JLabel("Proyecto: Cargando...");
+        lblProyecto.setFont(ConstantesVisuales.FUENTE_NEGRITA);
+        lblProyecto.setForeground(COLOR_TEXTO);
+        lblProyecto.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        lblCuposDisponibles = new JLabel("Cupos disponibles: Cargando...");
+        lblCuposDisponibles.setFont(ConstantesVisuales.FUENTE_NORMAL);
+        lblCuposDisponibles.setForeground(ConstantesVisuales.COLOR_TEXTO_SECUNDARIO);
+        lblCuposDisponibles.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        card.add(lblProyecto);
+        card.add(Box.createVerticalStrut(6));
+        card.add(lblCuposDisponibles);
+
+        return card;
+    }
+
+    private JPanel crearPanelTabla() {
+        JPanel panelTabla = new JPanel();
+        panelTabla.setBackground(COLOR_FONDO);
+        panelTabla.setLayout(new BoxLayout(panelTabla, BoxLayout.Y_AXIS));
+
+        // Barra de búsqueda
+        JPanel panelBusqueda = new JPanel(new BorderLayout(ConstantesVisuales.PADDING_MD, 0));
+        panelBusqueda.setBackground(COLOR_FONDO);
+        
+        JLabel lblBuscar = new JLabel("🔍 Buscar:");
+        lblBuscar.setFont(ConstantesVisuales.FUENTE_NORMAL_PEQUEÑO);
+        lblBuscar.setForeground(ConstantesVisuales.COLOR_TEXTO_PRINCIPAL);
+        
+        campoBusqueda = new JTextField();
+        campoBusqueda.setPreferredSize(new Dimension(250, ConstantesVisuales.ALTURA_CAMPO_TEXTO));
+        campoBusqueda.setFont(ConstantesVisuales.FUENTE_NORMAL);
+        campoBusqueda.setBorder(BorderFactory.createCompoundBorder(
+            new RoundedBorder(ConstantesVisuales.RADIO_BORDE_NORMAL, COLOR_BORDE, 1),
+            BorderFactory.createEmptyBorder(ConstantesVisuales.PADDING_XS, 
+                                           ConstantesVisuales.PADDING_SM, 
+                                           ConstantesVisuales.PADDING_XS, 
+                                           ConstantesVisuales.PADDING_SM)
+        ));
+        campoBusqueda.setToolTipText("Buscar por nombre, código o carrera");
+        
+        panelBusqueda.add(lblBuscar, BorderLayout.WEST);
+        panelBusqueda.add(campoBusqueda, BorderLayout.CENTER);
+        panelTabla.add(panelBusqueda);
+        panelTabla.add(Box.createVerticalStrut(ConstantesVisuales.MARGIN_ENTRE_CAMPOS));
+
+        // Tabla
+        String[] columnas = {"Código", "Nombres", "Carrera", "Nivel", "IRA", "Horas", "Salario"};
+        modeloTabla = new AdvancedTableModel(columnas);
+        tablaAyudantes = new JTable(modeloTabla);
+        tablaAyudantes.setRowHeight(ConstantesVisuales.ALTURA_CAMPO_TEXTO);
+        tablaAyudantes.setFont(ConstantesVisuales.FUENTE_NORMAL);
+        tablaAyudantes.setForeground(COLOR_TEXTO);
+        tablaAyudantes.setSelectionBackground(ConstantesVisuales.COLOR_SECUNDARIO_CLARO);
+        tablaAyudantes.setGridColor(COLOR_BORDE);
+        
+        // Estilizar header
+        JTableHeader th = tablaAyudantes.getTableHeader();
+        th.setBackground(ConstantesVisuales.COLOR_PRIMARIO);
+        th.setForeground(Color.WHITE);
+        th.setFont(ConstantesVisuales.FUENTE_NEGRITA);
+        th.setPreferredSize(new Dimension(0, 40));
+        
+        // Diseño alternado
+        tablaAyudantes.setDefaultRenderer(Object.class, new javax.swing.table.DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, 
+                                                          boolean hasFocus, int row, int column) {
+                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                if (!isSelected) {
+                    c.setBackground(row % 2 == 0 ? ConstantesVisuales.COLOR_FONDO_PRINCIPAL : Color.WHITE);
+                }
+                return c;
+            }
+        });
+        
+        JScrollPane scroll = new JScrollPane(tablaAyudantes);
+        scroll.setBorder(BorderFactory.createCompoundBorder(
+            new RoundedBorder(ConstantesVisuales.RADIO_BORDE_MEDIO, COLOR_BORDE, 1),
+            BorderFactory.createEmptyBorder(ConstantesVisuales.PADDING_XXS, 
+                                           ConstantesVisuales.PADDING_XXS, 
+                                           ConstantesVisuales.PADDING_XXS, 
+                                           ConstantesVisuales.PADDING_XXS)
+        ));
+        
+        panelTabla.add(scroll);
+        return panelTabla;
+    }
+
+    private JPanel crearPanelAcciones() {
+        JPanel acciones = new JPanel(new FlowLayout(FlowLayout.LEFT, ConstantesVisuales.PADDING_MD, 0));
+        acciones.setBackground(COLOR_FONDO);
+        
+        btnRegistrar = new StyledButton("➕ Realizar Contratación", StyledButton.TipoBoton.PRIMARIO);
+        btnRegistrar.setToolTipText("Realizar nueva contratación (Ctrl+N)");
+        
+        btnDarBaja = new StyledButton("🗑️ Dar de baja", StyledButton.TipoBoton.PELIGRO);
+        btnDarBaja.setToolTipText("Dar de baja ayudante seleccionado (Supr)");
+        
+        btnCrearProyecto = new StyledButton("📋 Crear Proyecto", StyledButton.TipoBoton.EXITO);
+        btnCrearProyecto.setToolTipText("Crear nuevo proyecto de investigación (Ctrl+P)");
+        
+        acciones.add(btnRegistrar);
+        acciones.add(btnDarBaja);
+        acciones.add(btnCrearProyecto);
+        
+        return acciones;
     }
 
     public void mostrarMensajeExito(String mensaje) {

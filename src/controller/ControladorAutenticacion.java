@@ -40,7 +40,7 @@ public class ControladorAutenticacion {
         }
 
         // Validar formato de correo
-        if (!esCorreoValido(correo)) {
+        if (!MiembroEPN.esCorreoValido(correo)) {
             resultado.setMensaje("Formato de correo inválido");
             resultado.agregarError("Correo incorrecto");
             return resultado;
@@ -177,14 +177,6 @@ public class ControladorAutenticacion {
     }
 
     /**
-     * NUEVO: Valida el formato básico de correo
-     */
-    private boolean esCorreoValido(String correo) {
-        // Validación simple: contiene @ y punto
-        return correo.contains("@") && correo.contains(".");
-    }
-
-    /**
      * NUEVO: Carga las notificaciones para el usuario actual
      * Si es Jefa, obtiene sus notificaciones
      */
@@ -209,12 +201,6 @@ public class ControladorAutenticacion {
         if (usuarioActual == null) {
             return "No hay usuario autenticado";
         }
-        return String.format(
-            "Usuario: %s | Rol: %s | Correo: %s | Estado: %s",
-            usuarioActual.getNombresCompletos(),
-            usuarioActual.getRol(),
-            usuarioActual.getCorreoInstitucional(),
-            usuarioActual.getEstado()
-        );
+        return usuarioActual.obtenerResumen();
     }
 }

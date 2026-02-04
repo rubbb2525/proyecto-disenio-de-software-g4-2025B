@@ -2,7 +2,7 @@ package controller;
 
 import model.*;
 import model.dao.*;
-import model.service.*;
+import model.service.ServicioDeEstadisticas;
 import java.util.Date;
 import java.util.List;
 
@@ -10,10 +10,10 @@ import java.util.List;
  * Controlador para operaciones del Director
  * 
  * REFACTORIZACIÓN:
- * - Usa ServicioConversionAyudante en lugar de llamar a Estudiante.convertirAAyudante()
+ * - Usa métodos del modelo (Estudiante.convertirAAyudante/Asistente)
  * - Obtiene proyecto via DAO en lugar de mantenerlo como atributo en Director
- * - Usa ServicioDeFiltrado para filtrado (no JefaDepartamento)
- * - Usa ServicioDeEstadisticas para estadísticas
+ * - Usa Ayudante.obtenerActivos para filtrado
+ * - Usa ServicioDeEstadisticas para estadísticas agregadas
  */
 public class ControladorDirector {
     private Director directorActual;
@@ -25,9 +25,7 @@ public class ControladorDirector {
     private TecnicoDAO tecnicoDAO;
     private AsistenteDAO asistenteDAO;
 
-    // INYECCIÓN DE SERVICIOS
-    private ServicioConversionAyudante servicioConversion;
-    private ServicioDeFiltrado servicioDeFiltrado;
+    // ÚNICO SERVICIO: Estadísticas agregadas
     private ServicioDeEstadisticas servicioEstadisticas;
 
     public ControladorDirector(
@@ -72,185 +70,112 @@ public class ControladorDirector {
      * Registra un nuevo ayudante
      * 
      * REFACTORIZACIÓN:
-     * - Usa ServicioConversionAyudante en lugar de estudiante.convertirAAyudante()
-     * - Valida antes de convertir usando puedeConvertirse()
-     * - Obtiene mensajes de error descriptivos
+     * - Usa validaciones del modelo (Estudiante, Proyectos)
+     * - Usa Estudiante.convertirAAyudante() para la conversión
      */
-    public ResultadoOperacion registrarAyudante(String codigoEstudiante, int horas, double salario) {
-        ResultadoOperacion resultado = new ResultadoOperacion();
-        
+    public ResultadoOperacion registrarAyudante(String codigoEstudiante, int horas, int meses) {
         // Obtener proyecto del director
         Proyectos proyecto = obtenerProyectoDelDirector();
         if (proyecto == null) {
-            resultado.setMensaje("Director sin proyecto asignado");
-            resultado.agregarError("Proyecto no disponible");
-            return resultado;
+            return ResultadoOperacion.fallido("Director sin proyecto asignado", "Proyecto no disponible");
         }
 
         // Buscar estudiante
         Estudiante estudiante = buscarEstudiante(codigoEstudiante);
         if (estudiante == null) {
-            resultado.setMensaje("Estudiante no encontrado");
-            resultado.agregarError("Código de estudiante inválido");
-            return resultado;
+            return ResultadoOperacion.noEncontrado("Estudiante", "Código de estudiante");
         }
 
-        // CAMBIO: Usar ServicioConversionAyudante
-        // Validar que se puede convertir
-        if (!ServicioConversionAyudante.puedeConvertirse(estudiante, horas, salario)) {
-            String errorMsg = ServicioConversionAyudante.obtenerMensajeError(
-                estudiante, horas, salario
-            );
-            resultado.setMensaje(errorMsg);
-            resultado.agregarError("Conversión no válida");
-            return resultado;
+        // Validar conversión usando el modelo
+        ResultadoOperacion validacion = estudiante.validarConversionAyudante(horas, meses);
+        if (!validacion.esExitoso()) {
+            return validacion;
         }
 
-        // Convertir usando el servicio
-        Ayudante ayudante = ServicioConversionAyudante.convertirEstudianteAAyudante(
-            estudiante,
-            proyecto,
-            horas,
-            salario
-        );
+        // Convertir usando el método del modelo
+        Ayudante ayudante = estudiante.convertirAAyudante(proyecto, horas, meses);
 
         if (ayudante == null) {
-            resultado.setMensaje("No se pudo convertir a ayudante");
-            resultado.agregarError("Error en la conversión");
-            return resultado;
+            return ResultadoOperacion.fallido("No se pudo convertir a ayudante", "Error en la conversión");
         }
 
         // Guardar en BD
         if (!ayudanteDAO.guardar(ayudante)) {
-            resultado.setMensaje("Error al guardar en BD");
-            resultado.agregarError("Error de persistencia");
-            return resultado;
+            return ResultadoOperacion.errorPersistencia("guardar ayudante");
         }
 
         // Notificar a jefa
-        Notificacion notif = new Notificacion(
-            "NOT_" + System.currentTimeMillis(),
-            "Nuevo ayudante registrado: " + ayudante.getNombresCompletos() + 
-            " en proyecto " + proyecto.getNombreProyecto(),
-            "REGISTRO_AYUDANTE"
-        );
-        notif.setAyudanteRelacionado(ayudante);
-        notif.setProyectoRelacionado(proyecto);
-        
-        // Guardar en BD
+        Notificacion notif = Notificacion.crearRegistroAyudante(ayudante, proyecto);
         notificacionDAO.guardar(notif);
-        
-        // Enviar a Jefa en memoria
         jefaDepartamento.recibirNotificacion(notif);
 
-        resultado.setExitoso(true);
-        resultado.setMensaje("Ayudante registrado exitosamente");
-
-        return resultado;
+        return ResultadoOperacion.exitoso("Ayudante registrado exitosamente");
     }
 
     /**
      * Da de baja un ayudante
      */
     public ResultadoOperacion darDeBajaAyudante(String codigoAyudante, String motivo, Date fecha) {
-        ResultadoOperacion resultado = new ResultadoOperacion();
-
         // Buscar ayudante
         Ayudante ayudante = ayudanteDAO.buscarPorId(codigoAyudante);
         if (ayudante == null) {
-            resultado.setMensaje("Ayudante no encontrado");
-            resultado.agregarError("Código de ayudante inválido");
-            return resultado;
+            return ResultadoOperacion.noEncontrado("Ayudante", "Código de ayudante");
         }
 
-        // Dar de baja
-        ayudante.darDeBaja(motivo, fecha);
+        // Dar de baja (ahora con validación en el modelo)
+        ResultadoOperacion resultado = ayudante.darDeBaja(motivo, fecha);
+        if (!resultado.esExitoso()) {
+            return resultado;
+        }
 
         // Actualizar en BD
         if (!ayudanteDAO.actualizar(ayudante)) {
-            resultado.setMensaje("Error al actualizar en BD");
-            resultado.agregarError("Error de persistencia");
-            return resultado;
+            return ResultadoOperacion.errorPersistencia("actualizar ayudante");
         }
 
         // Notificar a jefa
-        Notificacion notif = new Notificacion(
-            "NOT_" + System.currentTimeMillis(),
-            "Ayudante dado de baja: " + ayudante.getNombresCompletos() + 
-            " - Motivo: " + motivo,
-            "BAJA_AYUDANTE"
-        );
-        notif.setAyudanteRelacionado(ayudante);
-        
-        // Guardar en BD
+        Notificacion notif = Notificacion.crearBajaAyudante(ayudante, motivo);
         notificacionDAO.guardar(notif);
-        
-        // Enviar a Jefa en memoria
         jefaDepartamento.recibirNotificacion(notif);
 
-        resultado.setExitoso(true);
-        resultado.setMensaje("Ayudante dado de baja exitosamente");
-
-        return resultado;
+        return ResultadoOperacion.exitoso("Ayudante dado de baja exitosamente");
     }
 
     public ResultadoOperacion registrarAsistente(
         String codigoEstudiante,
         int horas,
-        double salario,
-        String tituloAcademico,
-        String areaEspecializacion
+        int meses
 ) {
-
-    ResultadoOperacion resultado = new ResultadoOperacion();
-
     Proyectos proyecto = obtenerProyectoDelDirector();
     if (proyecto == null) {
-        resultado.setMensaje("Director sin proyecto asignado");
-        return resultado;
+        return ResultadoOperacion.fallido("Director sin proyecto asignado", "Proyecto no disponible");
     }
 
     Estudiante estudiante = buscarEstudiante(codigoEstudiante);
     if (estudiante == null) {
-        resultado.setMensaje("Estudiante no encontrado");
-        return resultado;
+        return ResultadoOperacion.noEncontrado("Estudiante", "Código de estudiante");
     }
 
-    if (!ServicioConversionAsistente.puedeConvertirse(
-            estudiante, horas, salario, tituloAcademico, areaEspecializacion)) {
-
-        resultado.setMensaje(
-            ServicioConversionAsistente.obtenerMensajeError(
-                estudiante, horas, salario, tituloAcademico, areaEspecializacion
-            )
-        );
-        return resultado;
+    // Validar conversión usando el modelo
+    ResultadoOperacion validacion = estudiante.validarConversionAsistente(horas, meses);
+    if (!validacion.esExitoso()) {
+        return validacion;
     }
 
-    AsistenteInvestigacion asistente =
-        ServicioConversionAsistente.convertirEstudianteAAsistente(
-            estudiante, proyecto, horas, salario,
-            tituloAcademico, areaEspecializacion
-        );
+    // Convertir usando el método del modelo
+    AsistenteInvestigacion asistente = estudiante.convertirAAsistente(
+        proyecto, horas, meses
+    );
 
     if (!asistenteDAO.guardar(asistente)) {
-        resultado.setMensaje("Error al guardar asistente en BD");
-        return resultado;
+        return ResultadoOperacion.errorPersistencia("guardar asistente");
     }
 
-    Notificacion notif = new Notificacion(
-        "NOT_" + System.currentTimeMillis(),
-        "Nuevo asistente registrado: " + asistente.getNombresCompletos(),
-        "REGISTRO_ASISTENTE"
-    );
-    notif.setProyectoRelacionado(proyecto);
+    Notificacion notif = Notificacion.crearRegistroAsistente(asistente, proyecto);
     notificacionDAO.guardar(notif);
     jefaDepartamento.recibirNotificacion(notif);
 
-    resultado.setExitoso(true);
-    resultado.setMensaje("Asistente registrado exitosamente");
-
-    return resultado;
+    return ResultadoOperacion.exitoso("Asistente registrado exitosamente");
 }
 
 public ResultadoOperacion registrarTecnico(TecnicoInvestigacion tecnico) {
@@ -271,12 +196,7 @@ public ResultadoOperacion registrarTecnico(TecnicoInvestigacion tecnico) {
         return resultado;
     }
 
-    Notificacion notif = new Notificacion(
-        "NOT_" + System.currentTimeMillis(),
-        "Nuevo técnico registrado: " + tecnico.getNombres(),
-        "REGISTRO_TECNICO"
-    );
-    notif.setProyectoRelacionado(proyecto);
+    Notificacion notif = Notificacion.crearRegistroTecnico(tecnico, proyecto);
 
     notificacionDAO.guardar(notif);
     jefaDepartamento.recibirNotificacion(notif);
@@ -304,15 +224,15 @@ public ResultadoOperacion registrarTecnico(TecnicoInvestigacion tecnico) {
 
     /**
      * NUEVO: Obtiene ayudantes activos del proyecto
-     * Usa ServicioDeFiltrado para filtrado
+     * Usa Ayudante.obtenerActivos para filtrado
      */
     public List<Ayudante> obtenerAyudantesActivos() {
         List<Ayudante> ayudantes = consultarAyudantesDelProyecto();
         if (ayudantes == null) {
             return null;
         }
-        // Usar servicio de filtrado
-        return ServicioDeFiltrado.obtenerActivos(ayudantes);
+        // Usar método estático del modelo
+        return Ayudante.obtenerActivos(ayudantes);
     }
 
     /**
@@ -396,69 +316,29 @@ public ResultadoOperacion registrarTecnico(TecnicoInvestigacion tecnico) {
     public ResultadoOperacion crearProyecto(String codigoProyecto, String nombreProyecto, 
                                            String descripcion, Date fechaInicio, Date fechaFin,
                                            TipoProyecto tipoProyecto, int ayudantesPlanificados) {
-        ResultadoOperacion resultado = new ResultadoOperacion();
-
-        // Validar que el director no tenga ya un proyecto activo
+        // Validar que el director pueda crear proyecto
         Proyectos proyectoExistente = obtenerProyectoDelDirector();
-        if (proyectoExistente != null && "ACTIVO".equals(proyectoExistente.getEstado())) {
-            resultado.setMensaje("El director ya tiene un proyecto activo");
-            resultado.agregarError("No se puede crear más de un proyecto activo simultáneamente");
-            return resultado;
-        }
-
-        // Validar código del proyecto
-        if (codigoProyecto == null || codigoProyecto.trim().isEmpty()) {
-            resultado.setMensaje("El código del proyecto es obligatorio");
-            resultado.agregarError("Código de proyecto vacío");
-            return resultado;
+        ResultadoOperacion validacionDirector = directorActual.validarCreacionProyecto(proyectoExistente);
+        if (!validacionDirector.esExitoso()) {
+            return validacionDirector;
         }
 
         // Validar que el código no esté duplicado
         Proyectos proyectoDuplicado = proyectoDAO.buscarPorCodigo(codigoProyecto);
         if (proyectoDuplicado != null) {
-            resultado.setMensaje("El código de proyecto ya existe");
-            resultado.agregarError("Código duplicado: " + codigoProyecto);
-            return resultado;
+            return ResultadoOperacion.fallido(
+                "El código de proyecto ya existe",
+                "Código duplicado: " + codigoProyecto
+            );
         }
 
-        // Validar nombre del proyecto
-        if (nombreProyecto == null || nombreProyecto.trim().isEmpty()) {
-            resultado.setMensaje("El nombre del proyecto es obligatorio");
-            resultado.agregarError("Nombre de proyecto vacío");
-            return resultado;
-        }
-
-        // Validar fechas
-        if (fechaInicio == null || fechaFin == null) {
-            resultado.setMensaje("Las fechas son obligatorias");
-            resultado.agregarError("Fechas incompletas");
-            return resultado;
-        }
-
-        if (fechaFin.before(fechaInicio)) {
-            resultado.setMensaje("La fecha de fin debe ser posterior a la fecha de inicio");
-            resultado.agregarError("Fechas inválidas");
-            return resultado;
-        }
-
-        // Validar tipo de proyecto
-        if (tipoProyecto == null) {
-            resultado.setMensaje("El tipo de proyecto es obligatorio");
-            resultado.agregarError("Tipo de proyecto no especificado");
-            return resultado;
-        }
-
-        // Validar número de ayudantes planificados
-        if (ayudantesPlanificados < 0) {
-            resultado.setMensaje("El número de ayudantes planificados debe ser mayor o igual a 0");
-            resultado.agregarError("Número de ayudantes inválido");
-            return resultado;
-        }
-
-        if (ayudantesPlanificados > 20) {
-            resultado.setMensaje("El número de ayudantes planificados no puede exceder 20");
-            resultado.agregarError("Demasiados ayudantes planificados");
-            return resultado;
+        // Validar datos del proyecto usando el modelo
+        ResultadoOperacion validacionProyecto = Proyectos.validarCreacion(
+            codigoProyecto, nombreProyecto, fechaInicio, fechaFin,
+            tipoProyecto, ayudantesPlanificados
+        );
+        if (!validacionProyecto.esExitoso()) {
+            return validacionProyecto;
         }
 
         // Crear el proyecto
@@ -478,31 +358,15 @@ public ResultadoOperacion registrarTecnico(TecnicoInvestigacion tecnico) {
 
         // Guardar en BD
         if (!proyectoDAO.guardar(nuevoProyecto)) {
-            resultado.setMensaje("Error al guardar el proyecto en la base de datos");
-            resultado.agregarError("Error de persistencia");
-            return resultado;
+            return ResultadoOperacion.errorPersistencia("guardar el proyecto");
         }
 
         // Notificar a la jefa de departamento
-        Notificacion notif = new Notificacion(
-            "NOT_" + System.currentTimeMillis(),
-            "Nuevo proyecto creado: " + nombreProyecto + 
-            " (" + codigoProyecto + ") por el director " + 
-            directorActual.getNombresCompletos(),
-            "PROGRESO_PROYECTO"
-        );
-        notif.setProyectoRelacionado(nuevoProyecto);
-        
-        // Guardar notificación en BD
+        Notificacion notif = Notificacion.crearNuevoProyecto(nuevoProyecto, directorActual);
         notificacionDAO.guardar(notif);
-        
-        // Enviar a Jefa en memoria
         jefaDepartamento.recibirNotificacion(notif);
 
-        resultado.setExitoso(true);
-        resultado.setMensaje("Proyecto creado exitosamente");
-
-        return resultado;
+        return ResultadoOperacion.exitoso("Proyecto creado exitosamente");
     }
 
     /**
@@ -512,6 +376,6 @@ public ResultadoOperacion registrarTecnico(TecnicoInvestigacion tecnico) {
      */
     public boolean puedeCrearProyecto() {
         Proyectos proyectoExistente = obtenerProyectoDelDirector();
-        return proyectoExistente == null || !"ACTIVO".equals(proyectoExistente.getEstado());
+        return Proyectos.puedeCrearNuevoProyecto(proyectoExistente);
     }
 }

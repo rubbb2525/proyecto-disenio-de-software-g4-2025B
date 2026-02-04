@@ -22,7 +22,7 @@ public class AyudanteDAO implements IDAO<Ayudante> {
         // El estudiante sigue siendo ESTUDIANTE incluso cuando es ayudante
         
         String sql = "INSERT INTO ayudantes (codigo_unico, cedula, correo_institucional, " +
-                     "nombres, apellidos, telefono, carrera, nivel, ira, horas_semanales, salario_mensual, " +
+                     "nombres, apellidos, telefono, carrera, nivel, ira, horas_semanales, meses_contratados, " +
                      "estado, fecha_registro, codigo_proyecto) " +
                      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
@@ -37,7 +37,7 @@ public class AyudanteDAO implements IDAO<Ayudante> {
             ps.setInt(8, ayudante.getNivel());
             ps.setFloat(9, ayudante.getIRA());
             ps.setInt(10, ayudante.getHorasSemanales());
-            ps.setDouble(11, ayudante.getSalarioMensual());
+            ps.setInt(11, ayudante.getMesesContratados());
             ps.setString(12, ayudante.getEstado() != null ? ayudante.getEstado() : "ACTIVO");
             ps.setTimestamp(13, new Timestamp(ayudante.getFechaRegistro().getTime()));
             ps.setString(14, ayudante.getProyectoAsignado() != null ? 
@@ -174,7 +174,7 @@ public class AyudanteDAO implements IDAO<Ayudante> {
             ps.setInt(7, ayudante.getNivel());
             ps.setFloat(8, ayudante.getIRA());
             ps.setInt(9, ayudante.getHorasSemanales());
-            ps.setDouble(10, ayudante.getSalarioMensual());
+            ps.setInt(10, ayudante.getMesesContratados());
             ps.setString(11, ayudante.getEstado());
             ps.setTimestamp(12, ayudante.getFechaFinalizacion() != null ? 
                            new Timestamp(ayudante.getFechaFinalizacion().getTime()) : null);
@@ -231,7 +231,7 @@ public class AyudanteDAO implements IDAO<Ayudante> {
         ayudante.setNivel(rs.getInt("nivel"));
         ayudante.setIRA(rs.getFloat("ira"));
         ayudante.setHorasSemanales(rs.getInt("horas_semanales"));
-        ayudante.setSalarioMensual(rs.getDouble("salario_mensual"));
+        ayudante.setMesesContratados(rs.getInt("meses_contratados"));
         ayudante.setEstado(rs.getString("estado"));
         
         if (rs.getTimestamp("fecha_registro") != null) {

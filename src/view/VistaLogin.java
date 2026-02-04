@@ -1,18 +1,19 @@
 package view;
 
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import java.awt.*;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
+import java.util.function.Consumer;
 import controller.ControladorAutenticacion;
 import model.ResultadoOperacion;
-import view.componentes.PlaceholderTextField;
-import view.componentes.StyledButton;
-import view.componentes.RoundedBorder;
-import view.componentes.IconManager;
-import view.componentes.ToastMessage;
-import java.util.function.Consumer;
+import view.componentes.*;
 
 /**
- * Ventana de login del sistema
+ * VistaLogin - Pantalla de autenticación
+ * Requisitos visuales: Clase ConstantesVisuales
+ * Diseño: Formulario centralizado con card de 600x500px
  */
 public class VistaLogin extends JFrame {
     private PlaceholderTextField txtCorreo;
@@ -27,7 +28,7 @@ public class VistaLogin extends JFrame {
     public VistaLogin() {
         setTitle("Sistema Gestión Ayudantes - Login");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(520, 420);
+        setSize(ConstantesVisuales.VENTANA_NORMAL);
         setLocationRelativeTo(null);
         setResizable(false);
 
@@ -35,126 +36,266 @@ public class VistaLogin extends JFrame {
     }
 
     private void inicializarComponentes() {
-        Color fondo = new Color(245, 247, 250);
-        Color textoSecundario = new Color(149, 165, 166);
-        Color textoPrincipal = new Color(44, 62, 80);
-        Color primario = new Color(0, 61, 165);
+        // Panel principal con fondo
+        JPanel panelPrincipal = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, 
+                                     RenderingHints.VALUE_ANTIALIAS_ON);
+                g2d.setColor(ConstantesVisuales.COLOR_FONDO_PRINCIPAL);
+                g2d.fillRect(0, 0, getWidth(), getHeight());
+            }
+        };
+        panelPrincipal.setLayout(new GridBagLayout());
+        panelPrincipal.setBorder(BorderFactory.createEmptyBorder(
+            ConstantesVisuales.PADDING_XXL, 
+            ConstantesVisuales.PADDING_XXL, 
+            ConstantesVisuales.PADDING_XXL, 
+            ConstantesVisuales.PADDING_XXL
+        ));
 
-        JPanel panelPrincipal = new JPanel(new BorderLayout());
-        panelPrincipal.setBackground(fondo);
-        panelPrincipal.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        // Card de login
+        JPanel cardLogin = crearCardLogin();
+        
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.weightx = 1;
+        gbc.weighty = 1;
+        panelPrincipal.add(cardLogin, gbc);
 
+        setContentPane(panelPrincipal);
+    }
+
+    private JPanel crearCardLogin() {
         JPanel card = new JPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-        card.setBackground(Color.WHITE);
+        card.setBackground(ConstantesVisuales.COLOR_TARJETA);
         card.setBorder(BorderFactory.createCompoundBorder(
-            new RoundedBorder(16, new Color(225, 232, 237), 1),
-            BorderFactory.createEmptyBorder(24, 28, 24, 28)
+            new RoundedBorder(ConstantesVisuales.RADIO_BORDE_XL, 
+                            ConstantesVisuales.COLOR_BORDE, 1),
+            BorderFactory.createEmptyBorder(
+                ConstantesVisuales.PADDING_XL,
+                ConstantesVisuales.PADDING_XL,
+                ConstantesVisuales.PADDING_XL,
+                ConstantesVisuales.PADDING_XL
+            )
         ));
-        card.setMaximumSize(new Dimension(420, 320));
+        card.setMaximumSize(new Dimension(500, 600));
 
-        JLabel lblLogo = new JLabel(IconManager.getInstance().getLogoIcon(64));
-        lblLogo.setAlignmentX(Component.CENTER_ALIGNMENT);
+        // Header
+        JPanel header = crearHeader();
+        card.add(header);
+        card.add(Box.createVerticalStrut(ConstantesVisuales.MARGIN_ENTRE_SECCIONES));
 
-        JLabel lblTitulo = new JLabel("Iniciar Sesión");
-        lblTitulo.setFont(new Font("Arial", Font.BOLD, 20));
-        lblTitulo.setForeground(primario);
-        lblTitulo.setAlignmentX(Component.CENTER_ALIGNMENT);
+        // Campos del formulario
+        JPanel panelCampos = new JPanel();
+        panelCampos.setLayout(new BoxLayout(panelCampos, BoxLayout.Y_AXIS));
+        panelCampos.setBackground(ConstantesVisuales.COLOR_TARJETA);
+        panelCampos.setOpaque(false);
 
-        JLabel lblSub = new JLabel("Sistema de Gestión de Ayudantes");
-        lblSub.setFont(new Font("Arial", Font.PLAIN, 12));
-        lblSub.setForeground(textoSecundario);
-        lblSub.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        JLabel lblCorreo = new JLabel("Correo institucional");
-        lblCorreo.setFont(new Font("Arial", Font.PLAIN, 12));
-        lblCorreo.setForeground(textoPrincipal);
-        lblCorreo.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        txtCorreo = new PlaceholderTextField("usuario@fis.epn.edu.ec");
-        txtCorreo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
-        txtCorreo.setHorizontalAlignment(JTextField.CENTER);
-
-        JLabel lblPassword = new JLabel("Contraseña");
-        lblPassword.setFont(new Font("Arial", Font.PLAIN, 12));
-        lblPassword.setForeground(textoPrincipal);
-        lblPassword.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        // Panel de contraseña con botón toggle
-        JPanel panelPassword = new JPanel(new BorderLayout());
-        panelPassword.setBackground(Color.WHITE);
-        panelPassword.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        // Campo correo
+        txtCorreo = crearTextField("usuario@fis.epn.edu.ec");
+        panelCampos.add(crearCampoFormulario("Correo Institucional", txtCorreo, true, 
+            "Usa tu correo de la EPN"));
         
-        txtPassword = new JPasswordField();
-        txtPassword.setFont(new Font("Arial", Font.PLAIN, 12));
-        txtPassword.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(225, 232, 237), 1),
-            BorderFactory.createEmptyBorder(8, 12, 8, 12)
-        ));
-        txtPassword.setHorizontalAlignment(JTextField.CENTER);
-        
-        btnMostrarPassword = new JButton();
-        btnMostrarPassword.setBorder(null);
-        btnMostrarPassword.setBackground(Color.BLUE);
-        btnMostrarPassword.setFocusPainted(false);
-        btnMostrarPassword.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        btnMostrarPassword.setPreferredSize(new Dimension(40, 40));
-        btnMostrarPassword.setToolTipText("Mostrar/Ocultar contraseña");
-        // Icono inicial: ojo cerrado
-        btnMostrarPassword.setIcon(IconManager.getInstance().getIcon("eyeclosed.svg", 18));
-        
-        panelPassword.add(txtPassword, BorderLayout.CENTER);
-        panelPassword.add(btnMostrarPassword, BorderLayout.EAST);
+        panelCampos.add(Box.createVerticalStrut(ConstantesVisuales.MARGIN_ENTRE_CAMPOS));
 
-        lblMensajeError = new JLabel("");
-        lblMensajeError.setForeground(Color.RED);
-        lblMensajeError.setFont(new Font("Arial", Font.PLAIN, 11));
-        lblMensajeError.setAlignmentX(Component.CENTER_ALIGNMENT);
+        // Campo contraseña
+        JPanel panelPassword = crearCampoPassword();
+        panelCampos.add(panelPassword);
+
+        card.add(panelCampos);
+        card.add(Box.createVerticalStrut(ConstantesVisuales.MARGIN_ENTRE_SECCIONES));
+
+        // Mensaje de error
+        lblMensajeError = new JLabel();
+        lblMensajeError.setFont(ConstantesVisuales.FUENTE_NORMAL_PEQUEÑO);
+        lblMensajeError.setForeground(ConstantesVisuales.COLOR_ERROR);
+        lblMensajeError.setAlignmentX(Component.LEFT_ALIGNMENT);
+        card.add(lblMensajeError);
+        card.add(Box.createVerticalStrut(8));
+
+        // Botones
+        JPanel panelBotones = new JPanel();
+        panelBotones.setLayout(new BoxLayout(panelBotones, BoxLayout.X_AXIS));
+        panelBotones.setBackground(ConstantesVisuales.COLOR_TARJETA);
+        panelBotones.setOpaque(false);
 
         btnIngresar = new StyledButton("Ingresar", StyledButton.TipoBoton.PRIMARIO);
-        btnIngresar.setAlignmentX(Component.CENTER_ALIGNMENT);
-        btnIngresar.setMaximumSize(new Dimension(180, 42));
-
-        card.add(lblLogo);
-        card.add(Box.createVerticalStrut(8));
-        card.add(lblTitulo);
-        card.add(Box.createVerticalStrut(4));
-        card.add(lblSub);
-        card.add(Box.createVerticalStrut(18));
-        card.add(lblCorreo);
-        card.add(Box.createVerticalStrut(6));
-        card.add(txtCorreo);
-        card.add(Box.createVerticalStrut(14));
-        card.add(lblPassword);
-        card.add(Box.createVerticalStrut(6));
-        card.add(panelPassword);
-        card.add(Box.createVerticalStrut(12));
-        card.add(btnIngresar);
-        card.add(Box.createVerticalStrut(8));
-        card.add(lblMensajeError);
-
-        // Footer con versión
-        JPanel footer = new JPanel();
-        footer.setBackground(fondo);
-        JLabel lblVersion = new JLabel("Versión 1.0 - 2026 | FIS-EPN");
-        lblVersion.setFont(new Font("Arial", Font.PLAIN, 10));
-        lblVersion.setForeground(textoSecundario);
-        footer.add(lblVersion);
-
-        JPanel wrapper = new JPanel();
-        wrapper.setBackground(fondo);
-        wrapper.setLayout(new BoxLayout(wrapper, BoxLayout.Y_AXIS));
-        wrapper.add(Box.createVerticalGlue());
-        wrapper.add(card);
-        wrapper.add(Box.createVerticalStrut(12));
-        wrapper.add(footer);
-        wrapper.add(Box.createVerticalGlue());
-
-        panelPrincipal.add(wrapper, BorderLayout.CENTER);
-        add(panelPrincipal);
+        btnIngresar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 
+            ConstantesVisuales.ALTURA_BOTON_NORMAL));
         
-        // Configurar evento de toggle password
+        panelBotones.add(btnIngresar);
+        card.add(panelBotones);
+
+        // Agregar glue para centrar
+        card.add(Box.createVerticalGlue());
+
+        return card;
+    }
+
+    private JPanel crearHeader() {
+        JPanel header = new JPanel();
+        header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
+        header.setBackground(ConstantesVisuales.COLOR_TARJETA);
+        header.setOpaque(false);
+
+        JLabel lblTitulo = new JLabel("Iniciar Sesión");
+        lblTitulo.setFont(ConstantesVisuales.FUENTE_TITULO);
+        lblTitulo.setForeground(ConstantesVisuales.COLOR_PRIMARIO);
+        lblTitulo.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel lblSubtitulo = new JLabel("Sistema de Gestión de Ayudantes EPN");
+        lblSubtitulo.setFont(ConstantesVisuales.FUENTE_NORMAL_PEQUEÑO);
+        lblSubtitulo.setForeground(ConstantesVisuales.COLOR_TEXTO_SECUNDARIO);
+        lblSubtitulo.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        header.add(lblTitulo);
+        header.add(Box.createVerticalStrut(4));
+        header.add(lblSubtitulo);
+
+        return header;
+    }
+
+    private JPanel crearCampoFormulario(String label, JTextField campo, 
+                                        boolean obligatorio, String ayuda) {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setOpaque(false);
+        panel.setBorder(BorderFactory.createEmptyBorder(0, 0, 
+            ConstantesVisuales.MARGIN_ENTRE_CAMPOS, 0));
+
+        // Label
+        JLabel lblCampo = new JLabel(label + (obligatorio ? " *" : ""));
+        lblCampo.setFont(ConstantesVisuales.FUENTE_NEGRITA);
+        lblCampo.setForeground(ConstantesVisuales.COLOR_TEXTO_PRINCIPAL);
+        lblCampo.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(lblCampo);
+        panel.add(Box.createVerticalStrut(6));
+
+        // Campo
+        campo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 
+            ConstantesVisuales.ALTURA_CAMPO_TEXTO));
+        campo.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(campo);
+
+        // Ayuda
+        if (ayuda != null && !ayuda.isEmpty()) {
+            panel.add(Box.createVerticalStrut(4));
+            JLabel lblAyuda = new JLabel(ayuda);
+            lblAyuda.setFont(ConstantesVisuales.FUENTE_MUY_PEQUEÑO);
+            lblAyuda.setForeground(ConstantesVisuales.COLOR_TEXTO_SECUNDARIO);
+            lblAyuda.setAlignmentX(Component.LEFT_ALIGNMENT);
+            panel.add(lblAyuda);
+        }
+
+        return panel;
+    }
+
+    private PlaceholderTextField crearTextField(String placeholder) {
+        PlaceholderTextField txt = new PlaceholderTextField(placeholder);
+        txt.setFont(ConstantesVisuales.FUENTE_NORMAL);
+        txt.setForeground(ConstantesVisuales.COLOR_TEXTO_PRINCIPAL);
+        txt.setBackground(Color.WHITE);
+        txt.setBorder(BorderFactory.createCompoundBorder(
+            new RoundedBorder(ConstantesVisuales.RADIO_BORDE_NORMAL, 
+                            ConstantesVisuales.COLOR_BORDE, 1),
+            BorderFactory.createEmptyBorder(6, 10, 6, 10)
+        ));
+
+        // Efecto focus
+        txt.addFocusListener(new FocusAdapter() {
+            public void focusGained(FocusEvent e) {
+                txt.setBorder(BorderFactory.createCompoundBorder(
+                    new RoundedBorder(ConstantesVisuales.RADIO_BORDE_NORMAL, 
+                                    ConstantesVisuales.COLOR_PRIMARIO, 2),
+                    BorderFactory.createEmptyBorder(5, 9, 5, 9)
+                ));
+            }
+            public void focusLost(FocusEvent e) {
+                txt.setBorder(BorderFactory.createCompoundBorder(
+                    new RoundedBorder(ConstantesVisuales.RADIO_BORDE_NORMAL, 
+                                    ConstantesVisuales.COLOR_BORDE, 1),
+                    BorderFactory.createEmptyBorder(6, 10, 6, 10)
+                ));
+            }
+        });
+
+        return txt;
+    }
+
+    private JPanel crearCampoPassword() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setOpaque(false);
+
+        // Label
+        JLabel lblPassword = new JLabel("Contraseña *");
+        lblPassword.setFont(ConstantesVisuales.FUENTE_NEGRITA);
+        lblPassword.setForeground(ConstantesVisuales.COLOR_TEXTO_PRINCIPAL);
+        lblPassword.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(lblPassword);
+        panel.add(Box.createVerticalStrut(6));
+
+        // Panel con campo y botón
+        JPanel panelContenedor = new JPanel(new BorderLayout());
+        panelContenedor.setBackground(ConstantesVisuales.COLOR_TARJETA);
+        panelContenedor.setOpaque(false);
+
+        txtPassword = new JPasswordField();
+        txtPassword.setFont(ConstantesVisuales.FUENTE_NORMAL);
+        txtPassword.setForeground(ConstantesVisuales.COLOR_TEXTO_PRINCIPAL);
+        txtPassword.setBackground(Color.WHITE);
+        txtPassword.setBorder(BorderFactory.createCompoundBorder(
+            new RoundedBorder(ConstantesVisuales.RADIO_BORDE_NORMAL, 
+                            ConstantesVisuales.COLOR_BORDE, 1),
+            BorderFactory.createEmptyBorder(6, 10, 6, 10)
+        ));
+
+        // Efecto focus
+        txtPassword.addFocusListener(new FocusAdapter() {
+            public void focusGained(FocusEvent e) {
+                txtPassword.setBorder(BorderFactory.createCompoundBorder(
+                    new RoundedBorder(ConstantesVisuales.RADIO_BORDE_NORMAL, 
+                                    ConstantesVisuales.COLOR_PRIMARIO, 2),
+                    BorderFactory.createEmptyBorder(5, 9, 5, 9)
+                ));
+            }
+            public void focusLost(FocusEvent e) {
+                txtPassword.setBorder(BorderFactory.createCompoundBorder(
+                    new RoundedBorder(ConstantesVisuales.RADIO_BORDE_NORMAL, 
+                                    ConstantesVisuales.COLOR_BORDE, 1),
+                    BorderFactory.createEmptyBorder(6, 10, 6, 10)
+                ));
+            }
+        });
+
+        btnMostrarPassword = new JButton("👁");
+        btnMostrarPassword.setFocusPainted(false);
+        btnMostrarPassword.setBorderPainted(false);
+        btnMostrarPassword.setContentAreaFilled(false);
+        btnMostrarPassword.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btnMostrarPassword.setFont(ConstantesVisuales.FUENTE_NORMAL);
+        btnMostrarPassword.setForeground(ConstantesVisuales.COLOR_PRIMARIO);
+        btnMostrarPassword.setPreferredSize(new Dimension(40, 35));
         btnMostrarPassword.addActionListener(e -> togglePasswordVisibility());
+
+        panelContenedor.add(txtPassword, BorderLayout.CENTER);
+        panelContenedor.add(btnMostrarPassword, BorderLayout.EAST);
+        panelContenedor.setMaximumSize(new Dimension(Integer.MAX_VALUE, 
+            ConstantesVisuales.ALTURA_CAMPO_TEXTO));
+
+        panel.add(panelContenedor);
+        panel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        return panel;
+    }
+
+    private void togglePasswordVisibility() {
+        passwordVisible = !passwordVisible;
+        txtPassword.setEchoChar(passwordVisible ? '\u0000' : '\u2022');
+        btnMostrarPassword.setText(passwordVisible ? "🙈" : "👁");
     }
 
     public void mostrarVentana() {
@@ -166,7 +307,7 @@ public class VistaLogin extends JFrame {
     }
 
     public String obtenerCorreo() {
-        return txtCorreo.getTextReal();
+        return txtCorreo.getText().trim();
     }
 
     public String obtenerPassword() {
@@ -174,24 +315,13 @@ public class VistaLogin extends JFrame {
     }
 
     public void mostrarError(String mensaje) {
-        lblMensajeError.setText(mensaje);
+        lblMensajeError.setText("⚠️ " + mensaje);
     }
 
     public void limpiarCampos() {
         txtCorreo.setText("");
         txtPassword.setText("");
         lblMensajeError.setText("");
-    }
-    
-    private void togglePasswordVisibility() {
-        passwordVisible = !passwordVisible;
-        if (passwordVisible) {
-            txtPassword.setEchoChar((char) 0);
-            btnMostrarPassword.setIcon(IconManager.getInstance().getIcon("eyeopen.svg", 18));
-        } else {
-            txtPassword.setEchoChar('•');
-            btnMostrarPassword.setIcon(IconManager.getInstance().getIcon("eyeclosed.svg", 18));
-        }
     }
 
     public void setControlador(ControladorAutenticacion controlador) {
@@ -217,13 +347,13 @@ public class VistaLogin extends JFrame {
         String password = obtenerPassword();
         
         // Validación básica
-        if (correo.trim().isEmpty()) {
+        if (correo.isEmpty()) {
             mostrarError("Por favor, ingrese su correo institucional");
             txtCorreo.requestFocus();
             return;
         }
         
-        if (password.trim().isEmpty()) {
+        if (password.isEmpty()) {
             mostrarError("Por favor, ingrese su contraseña");
             txtPassword.requestFocus();
             return;
@@ -233,7 +363,7 @@ public class VistaLogin extends JFrame {
         btnIngresar.setEnabled(false);
         btnIngresar.setText("Ingresando...");
         
-        // Simular proceso en background (en una app real sería un SwingWorker)
+        // Simular proceso en background
         Timer timer = new Timer(300, evt -> {
             ResultadoOperacion resultado = controlador.autenticar(correo, password);
             

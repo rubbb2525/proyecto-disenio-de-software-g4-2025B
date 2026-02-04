@@ -20,10 +20,9 @@ public class TecnicoDAO implements IDAO<TecnicoInvestigacion> {
             INSERT INTO tecnicos (
                 id_tecnico, cedula, correo_electronico,
                 nombres, apellidos, telefono,
-                especialidad_tecnica, anios_experiencia, empresa_origen,
-                horas_semanales, salario_mensual,
+                horas_semanales, meses_contratados,
                 estado, fecha_registro, codigo_proyecto
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
 
         try (PreparedStatement ps = conexion.prepareStatement(sql)) {
@@ -34,14 +33,11 @@ public class TecnicoDAO implements IDAO<TecnicoInvestigacion> {
             ps.setString(4, tecnico.getNombres());
             ps.setString(5, tecnico.getApellidos());
             ps.setString(6, tecnico.getTelefono());
-            ps.setString(7, tecnico.getEspecialidadTecnica());
-            ps.setInt(8, tecnico.getAniosExperiencia());
-            ps.setString(9, tecnico.getEmpresaOrigen());
-            ps.setInt(10, tecnico.getHorasSemanales());
-            ps.setDouble(11, tecnico.getSalarioMensual());
-            ps.setString(12, tecnico.getEstado() != null ? tecnico.getEstado() : "ACTIVO");
-            ps.setTimestamp(13, new Timestamp(tecnico.getFechaRegistro().getTime()));
-            ps.setString(14,
+            ps.setInt(7, tecnico.getHorasSemanales());
+            ps.setInt(8, tecnico.getMesesContratados());
+            ps.setString(9, tecnico.getEstado() != null ? tecnico.getEstado() : "ACTIVO");
+            ps.setTimestamp(10, new Timestamp(tecnico.getFechaRegistro().getTime()));
+            ps.setString(11,
                     tecnico.getProyectoAsignado() != null
                             ? tecnico.getProyectoAsignado().getCodigoProyecto()
                             : null
@@ -122,11 +118,8 @@ public class TecnicoDAO implements IDAO<TecnicoInvestigacion> {
                 nombres = ?,
                 apellidos = ?,
                 telefono = ?,
-                especialidad_tecnica = ?,
-                anios_experiencia = ?,
-                empresa_origen = ?,
                 horas_semanales = ?,
-                salario_mensual = ?,
+                meses_contratados = ?,
                 estado = ?,
                 fecha_finalizacion = ?,
                 motivo_salida = ?,
@@ -141,24 +134,21 @@ public class TecnicoDAO implements IDAO<TecnicoInvestigacion> {
             ps.setString(3, tecnico.getNombres());
             ps.setString(4, tecnico.getApellidos());
             ps.setString(5, tecnico.getTelefono());
-            ps.setString(6, tecnico.getEspecialidadTecnica());
-            ps.setInt(7, tecnico.getAniosExperiencia());
-            ps.setString(8, tecnico.getEmpresaOrigen());
-            ps.setInt(9, tecnico.getHorasSemanales());
-            ps.setDouble(10, tecnico.getSalarioMensual());
-            ps.setString(11, tecnico.getEstado());
-            ps.setTimestamp(12,
+            ps.setInt(6, tecnico.getHorasSemanales());
+            ps.setInt(7, tecnico.getMesesContratados());
+            ps.setString(8, tecnico.getEstado());
+            ps.setTimestamp(9,
                     tecnico.getFechaFinalizacion() != null
                             ? new Timestamp(tecnico.getFechaFinalizacion().getTime())
                             : null
             );
-            ps.setString(13, tecnico.getMotivoSalida());
-            ps.setString(14,
+            ps.setString(10, tecnico.getMotivoSalida());
+            ps.setString(11,
                     tecnico.getProyectoAsignado() != null
                             ? tecnico.getProyectoAsignado().getCodigoProyecto()
                             : null
             );
-            ps.setString(15, tecnico.getIdTecnico());
+            ps.setString(12, tecnico.getIdTecnico());
 
             return ps.executeUpdate() > 0;
 
@@ -206,11 +196,8 @@ public class TecnicoDAO implements IDAO<TecnicoInvestigacion> {
         tecnico.setNombres(rs.getString("nombres"));
         tecnico.setApellidos(rs.getString("apellidos"));
         tecnico.setTelefono(rs.getString("telefono"));
-        tecnico.setEspecialidadTecnica(rs.getString("especialidad_tecnica"));
-        tecnico.setAniosExperiencia(rs.getInt("anios_experiencia"));
-        tecnico.setEmpresaOrigen(rs.getString("empresa_origen"));
         tecnico.setHorasSemanales(rs.getInt("horas_semanales"));
-        tecnico.setSalarioMensual(rs.getDouble("salario_mensual"));
+        tecnico.setMesesContratados(rs.getInt("meses_contratados"));
         tecnico.setEstado(rs.getString("estado"));
 
         if (rs.getTimestamp("fecha_registro") != null) {
