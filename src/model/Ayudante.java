@@ -38,7 +38,7 @@ public class Ayudante extends MiembroEPN {
      */
     @Override
     public boolean esActivo() {
-        return "ACTIVO".equals(estado) && fechaFinalizacion == null;
+        return "ACTIVO".equals(getEstado()) && fechaFinalizacion == null;
     }
 
     /**
@@ -75,21 +75,13 @@ public class Ayudante extends MiembroEPN {
         }
 
         // Aplicar baja
-        this.estado = "INACTIVO";
+        setEstado("INACTIVO");
         this.motivoSalida = motivo;
         this.fechaFinalizacion = fecha;
 
         resultado.setExitoso(true);
         resultado.setMensaje("Ayudante dado de baja exitosamente");
         return resultado;
-    }
-
-    /**
-     * Calcula el costo total estimado basado en meses contratados
-     */
-    public double calcularCostoTotal() {
-        // Estimación: horas_semanales * semanas_por_mes * meses_contratados * valor_hora
-        return horasSemanales * 4.33 * mesesContratados * 5.0; // 5.0 es valor estimado por hora
     }
 
     // Getters y Setters
@@ -146,6 +138,9 @@ public class Ayudante extends MiembroEPN {
     }
 
     public void setProyectoAsignado(Proyectos proyectoAsignado) {
+        if (proyectoAsignado != null && !proyectoAsignado.tieneEstadoActivo()) {
+            throw new IllegalArgumentException("No se puede asignar un proyecto inactivo");
+        }
         this.proyectoAsignado = proyectoAsignado;
     }
 

@@ -11,9 +11,8 @@ import model.ResultadoOperacion;
 import view.componentes.*;
 
 /**
- * VistaLogin - Pantalla de autenticación
- * Requisitos visuales: Clase ConstantesVisuales
- * Diseño: Formulario centralizado con card de 600x500px
+ * VistaLogin - Pantalla de autenticación - VERSIÓN MEJORADA
+ * Sin emojis, diseño profesional y moderno
  */
 public class VistaLogin extends JFrame {
     private PlaceholderTextField txtCorreo;
@@ -24,278 +23,395 @@ public class VistaLogin extends JFrame {
     private ControladorAutenticacion controlador;
     private Consumer<String> onLoginSuccess;
     private boolean passwordVisible = false;
+    
+    // Panel de carga
+    private JPanel panelCargando;
 
     public VistaLogin() {
-        setTitle("Sistema Gestión Ayudantes - Login");
+        setTitle("Sistema de Gestión de Ayudantes - EPN");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(ConstantesVisuales.VENTANA_NORMAL);
+        setSize(1000, 650);
         setLocationRelativeTo(null);
         setResizable(false);
+        setUndecorated(false); // Mantener decoración nativa
 
         inicializarComponentes();
     }
 
     private void inicializarComponentes() {
-        // Panel principal con fondo
-        JPanel panelPrincipal = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2d = (Graphics2D) g;
-                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, 
-                                     RenderingHints.VALUE_ANTIALIAS_ON);
-                g2d.setColor(ConstantesVisuales.COLOR_FONDO_PRINCIPAL);
-                g2d.fillRect(0, 0, getWidth(), getHeight());
-            }
-        };
-        panelPrincipal.setLayout(new GridBagLayout());
-        panelPrincipal.setBorder(BorderFactory.createEmptyBorder(
-            ConstantesVisuales.PADDING_XXL, 
-            ConstantesVisuales.PADDING_XXL, 
-            ConstantesVisuales.PADDING_XXL, 
-            ConstantesVisuales.PADDING_XXL
-        ));
+        // Panel principal con diseño dual
+        JPanel panelPrincipal = new JPanel(new GridLayout(1, 2, 0, 0));
+        panelPrincipal.setBackground(ConstantesVisuales.COLOR_FONDO_PRINCIPAL);
 
-        // Card de login
-        JPanel cardLogin = crearCardLogin();
+        // Panel izquierdo: Branding
+        JPanel panelBranding = crearPanelBranding();
         
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.weightx = 1;
-        gbc.weighty = 1;
-        panelPrincipal.add(cardLogin, gbc);
+        // Panel derecho: Formulario
+        JPanel panelFormulario = crearPanelFormulario();
+
+        panelPrincipal.add(panelBranding);
+        panelPrincipal.add(panelFormulario);
 
         setContentPane(panelPrincipal);
     }
 
-    private JPanel crearCardLogin() {
-        JPanel card = new JPanel();
-        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-        card.setBackground(ConstantesVisuales.COLOR_TARJETA);
-        card.setBorder(BorderFactory.createCompoundBorder(
-            new RoundedBorder(ConstantesVisuales.RADIO_BORDE_XL, 
-                            ConstantesVisuales.COLOR_BORDE, 1),
-            BorderFactory.createEmptyBorder(
-                ConstantesVisuales.PADDING_XL,
-                ConstantesVisuales.PADDING_XL,
-                ConstantesVisuales.PADDING_XL,
-                ConstantesVisuales.PADDING_XL
-            )
-        ));
-        card.setMaximumSize(new Dimension(500, 600));
-
-        // Header
-        JPanel header = crearHeader();
-        card.add(header);
-        card.add(Box.createVerticalStrut(ConstantesVisuales.MARGIN_ENTRE_SECCIONES));
-
-        // Campos del formulario
-        JPanel panelCampos = new JPanel();
-        panelCampos.setLayout(new BoxLayout(panelCampos, BoxLayout.Y_AXIS));
-        panelCampos.setBackground(ConstantesVisuales.COLOR_TARJETA);
-        panelCampos.setOpaque(false);
-
-        // Campo correo
-        txtCorreo = crearTextField("usuario@fis.epn.edu.ec");
-        panelCampos.add(crearCampoFormulario("Correo Institucional", txtCorreo, true, 
-            "Usa tu correo de la EPN"));
+    private JPanel crearPanelBranding() {
+        JPanel panel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                                     RenderingHints.VALUE_ANTIALIAS_ON);
+                
+                // Degradado azul
+                GradientPaint gradient = new GradientPaint(
+                    0, 0, ConstantesVisuales.COLOR_PRIMARIO,
+                    0, getHeight(), ConstantesVisuales.COLOR_PRIMARIO_OSCURO
+                );
+                g2d.setPaint(gradient);
+                g2d.fillRect(0, 0, getWidth(), getHeight());
+                
+                // Patrón de puntos decorativos
+                g2d.setColor(new Color(255, 255, 255, 20));
+                for (int i = 0; i < 50; i++) {
+                    int x = (int)(Math.random() * getWidth());
+                    int y = (int)(Math.random() * getHeight());
+                    int size = (int)(Math.random() * 3) + 1;
+                    g2d.fillOval(x, y, size, size);
+                }
+            }
+        };
+        panel.setLayout(new GridBagLayout());
         
-        panelCampos.add(Box.createVerticalStrut(ConstantesVisuales.MARGIN_ENTRE_CAMPOS));
+        JPanel contenido = new JPanel();
+        contenido.setLayout(new BoxLayout(contenido, BoxLayout.Y_AXIS));
+        contenido.setOpaque(false);
+        contenido.setBorder(BorderFactory.createEmptyBorder(40, 60, 40, 60));
 
-        // Campo contraseña
-        JPanel panelPassword = crearCampoPassword();
-        panelCampos.add(panelPassword);
+        // Logo/Iniciales EPN
+        JPanel logoPanel = crearLogoEPN();
+        logoPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        card.add(panelCampos);
-        card.add(Box.createVerticalStrut(ConstantesVisuales.MARGIN_ENTRE_SECCIONES));
+        // Título principal
+        JLabel lblTitulo = new JLabel("Sistema de Gestión");
+        lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 32));
+        lblTitulo.setForeground(Color.WHITE);
+        lblTitulo.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // Mensaje de error
-        lblMensajeError = new JLabel();
-        lblMensajeError.setFont(ConstantesVisuales.FUENTE_NORMAL_PEQUEÑO);
-        lblMensajeError.setForeground(ConstantesVisuales.COLOR_ERROR);
-        lblMensajeError.setAlignmentX(Component.LEFT_ALIGNMENT);
-        card.add(lblMensajeError);
-        card.add(Box.createVerticalStrut(8));
+        JLabel lblSubtitulo = new JLabel("de Ayudantes");
+        lblSubtitulo.setFont(new Font("Segoe UI", Font.PLAIN, 28));
+        lblSubtitulo.setForeground(new Color(255, 255, 255, 230));
+        lblSubtitulo.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // Botones
-        JPanel panelBotones = new JPanel();
-        panelBotones.setLayout(new BoxLayout(panelBotones, BoxLayout.X_AXIS));
-        panelBotones.setBackground(ConstantesVisuales.COLOR_TARJETA);
-        panelBotones.setOpaque(false);
+        // Descripción
+        JLabel lblDescripcion = new JLabel("<html><center>Plataforma integral para la administración<br>" +
+            "y seguimiento de ayudantes de investigación</center></html>");
+        lblDescripcion.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        lblDescripcion.setForeground(new Color(255, 255, 255, 180));
+        lblDescripcion.setAlignmentX(Component.CENTER_ALIGNMENT);
+        lblDescripcion.setHorizontalAlignment(SwingConstants.CENTER);
 
-        btnIngresar = new StyledButton("Ingresar", StyledButton.TipoBoton.PRIMARIO);
-        btnIngresar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 
-            ConstantesVisuales.ALTURA_BOTON_NORMAL));
-        
-        panelBotones.add(btnIngresar);
-        card.add(panelBotones);
+        // Características
+        JPanel panelCaracteristicas = crearPanelCaracteristicas();
+        panelCaracteristicas.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // Agregar glue para centrar
-        card.add(Box.createVerticalGlue());
+        contenido.add(logoPanel);
+        contenido.add(Box.createVerticalStrut(30));
+        contenido.add(lblTitulo);
+        contenido.add(Box.createVerticalStrut(5));
+        contenido.add(lblSubtitulo);
+        contenido.add(Box.createVerticalStrut(20));
+        contenido.add(lblDescripcion);
+        contenido.add(Box.createVerticalStrut(40));
+        contenido.add(panelCaracteristicas);
 
-        return card;
+        panel.add(contenido);
+        return panel;
     }
 
-    private JPanel crearHeader() {
-        JPanel header = new JPanel();
-        header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
-        header.setBackground(ConstantesVisuales.COLOR_TARJETA);
-        header.setOpaque(false);
-
-        JLabel lblTitulo = new JLabel("Iniciar Sesión");
-        lblTitulo.setFont(ConstantesVisuales.FUENTE_TITULO);
-        lblTitulo.setForeground(ConstantesVisuales.COLOR_PRIMARIO);
-        lblTitulo.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel lblSubtitulo = new JLabel("Sistema de Gestión de Ayudantes EPN");
-        lblSubtitulo.setFont(ConstantesVisuales.FUENTE_NORMAL_PEQUEÑO);
-        lblSubtitulo.setForeground(ConstantesVisuales.COLOR_TEXTO_SECUNDARIO);
-        lblSubtitulo.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        header.add(lblTitulo);
-        header.add(Box.createVerticalStrut(4));
-        header.add(lblSubtitulo);
-
-        return header;
+    private JPanel crearLogoEPN() {
+        JPanel panel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                                     RenderingHints.VALUE_ANTIALIAS_ON);
+                
+                // Círculo exterior
+                g2d.setColor(new Color(255, 255, 255, 30));
+                g2d.fillOval(10, 10, 80, 80);
+                
+                // Círculo interior
+                g2d.setColor(Color.WHITE);
+                g2d.fillOval(20, 20, 60, 60);
+                
+                // Letras EPN
+                g2d.setColor(ConstantesVisuales.COLOR_PRIMARIO);
+                g2d.setFont(new Font("Segoe UI", Font.BOLD, 24));
+                FontMetrics fm = g2d.getFontMetrics();
+                String texto = "EPN";
+                int x = (100 - fm.stringWidth(texto)) / 2;
+                int y = (100 - fm.getHeight()) / 2 + fm.getAscent();
+                g2d.drawString(texto, x, y);
+            }
+        };
+        panel.setOpaque(false);
+        panel.setPreferredSize(new Dimension(100, 100));
+        panel.setMaximumSize(new Dimension(100, 100));
+        return panel;
     }
 
-    private JPanel crearCampoFormulario(String label, JTextField campo, 
-                                        boolean obligatorio, String ayuda) {
+    private JPanel crearPanelCaracteristicas() {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setOpaque(false);
-        panel.setBorder(BorderFactory.createEmptyBorder(0, 0, 
-            ConstantesVisuales.MARGIN_ENTRE_CAMPOS, 0));
 
-        // Label
-        JLabel lblCampo = new JLabel(label + (obligatorio ? " *" : ""));
-        lblCampo.setFont(ConstantesVisuales.FUENTE_NEGRITA);
-        lblCampo.setForeground(ConstantesVisuales.COLOR_TEXTO_PRINCIPAL);
-        lblCampo.setAlignmentX(Component.LEFT_ALIGNMENT);
-        panel.add(lblCampo);
-        panel.add(Box.createVerticalStrut(6));
+        String[] caracteristicas = {
+            "Gestión de proyectos de investigación",
+            "Control de ayudantes y asistentes",
+            "Reportes estadísticos en tiempo real"
+        };
 
-        // Campo
-        campo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 
-            ConstantesVisuales.ALTURA_CAMPO_TEXTO));
-        campo.setAlignmentX(Component.LEFT_ALIGNMENT);
-        panel.add(campo);
-
-        // Ayuda
-        if (ayuda != null && !ayuda.isEmpty()) {
-            panel.add(Box.createVerticalStrut(4));
-            JLabel lblAyuda = new JLabel(ayuda);
-            lblAyuda.setFont(ConstantesVisuales.FUENTE_MUY_PEQUEÑO);
-            lblAyuda.setForeground(ConstantesVisuales.COLOR_TEXTO_SECUNDARIO);
-            lblAyuda.setAlignmentX(Component.LEFT_ALIGNMENT);
-            panel.add(lblAyuda);
+        for (String caracteristica : caracteristicas) {
+            JPanel item = crearItemCaracteristica(caracteristica);
+            panel.add(item);
+            panel.add(Box.createVerticalStrut(12));
         }
 
         return panel;
     }
 
-    private PlaceholderTextField crearTextField(String placeholder) {
-        PlaceholderTextField txt = new PlaceholderTextField(placeholder);
-        txt.setFont(ConstantesVisuales.FUENTE_NORMAL);
-        txt.setForeground(ConstantesVisuales.COLOR_TEXTO_PRINCIPAL);
-        txt.setBackground(Color.WHITE);
-        txt.setBorder(BorderFactory.createCompoundBorder(
-            new RoundedBorder(ConstantesVisuales.RADIO_BORDE_NORMAL, 
-                            ConstantesVisuales.COLOR_BORDE, 1),
-            BorderFactory.createEmptyBorder(6, 10, 6, 10)
+    private JPanel crearItemCaracteristica(String texto) {
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        panel.setOpaque(false);
+        panel.setMaximumSize(new Dimension(400, 30));
+
+        // Indicador visual (check)
+        JLabel check = new JLabel("✓");
+        check.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        check.setForeground(new Color(46, 204, 113));
+        check.setPreferredSize(new Dimension(25, 25));
+        check.setHorizontalAlignment(SwingConstants.CENTER);
+
+        JLabel label = new JLabel(texto);
+        label.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        label.setForeground(new Color(255, 255, 255, 200));
+
+        panel.add(check);
+        panel.add(Box.createHorizontalStrut(10));
+        panel.add(label);
+
+        return panel;
+    }
+
+    private JPanel crearPanelFormulario() {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBackground(Color.WHITE);
+
+        // Card del formulario
+        JPanel cardFormulario = new JPanel();
+        cardFormulario.setLayout(new BoxLayout(cardFormulario, BoxLayout.Y_AXIS));
+        cardFormulario.setBackground(Color.WHITE);
+        cardFormulario.setBorder(BorderFactory.createEmptyBorder(60, 50, 60, 50));
+        cardFormulario.setMaximumSize(new Dimension(400, 600));
+
+        // Header del formulario
+        JLabel lblTitulo = new JLabel("Iniciar Sesión");
+        lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 28));
+        lblTitulo.setForeground(ConstantesVisuales.COLOR_TEXTO_PRINCIPAL);
+        lblTitulo.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel lblSubtitulo = new JLabel("Ingrese sus credenciales institucionales");
+        lblSubtitulo.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        lblSubtitulo.setForeground(ConstantesVisuales.COLOR_TEXTO_SECUNDARIO);
+        lblSubtitulo.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        cardFormulario.add(lblTitulo);
+        cardFormulario.add(Box.createVerticalStrut(8));
+        cardFormulario.add(lblSubtitulo);
+        cardFormulario.add(Box.createVerticalStrut(40));
+
+        // Campo correo
+        JPanel campoCorreo = crearCampoCorreo();
+        campoCorreo.setAlignmentX(Component.LEFT_ALIGNMENT);
+        cardFormulario.add(campoCorreo);
+        cardFormulario.add(Box.createVerticalStrut(24));
+
+        // Campo contraseña
+        JPanel campoPassword = crearCampoPassword();
+        campoPassword.setAlignmentX(Component.LEFT_ALIGNMENT);
+        cardFormulario.add(campoPassword);
+        cardFormulario.add(Box.createVerticalStrut(8));
+
+        // Mensaje de error
+        lblMensajeError = new JLabel();
+        lblMensajeError.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        lblMensajeError.setForeground(ConstantesVisuales.COLOR_ERROR);
+        lblMensajeError.setAlignmentX(Component.LEFT_ALIGNMENT);
+        lblMensajeError.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        cardFormulario.add(lblMensajeError);
+        cardFormulario.add(Box.createVerticalStrut(24));
+
+        // Botón ingresar
+        btnIngresar = new StyledButton("Ingresar al Sistema", StyledButton.TipoBoton.PRIMARIO);
+        btnIngresar.setAlignmentX(Component.LEFT_ALIGNMENT);
+        btnIngresar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 45));
+        btnIngresar.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        cardFormulario.add(btnIngresar);
+        cardFormulario.add(Box.createVerticalStrut(16));
+
+        // Información adicional
+        JLabel lblInfo = new JLabel("<html><center>¿Problemas para ingresar?<br>" +
+            "Contacte al administrador del sistema</center></html>");
+        lblInfo.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        lblInfo.setForeground(ConstantesVisuales.COLOR_TEXTO_SECUNDARIO);
+        lblInfo.setAlignmentX(Component.CENTER_ALIGNMENT);
+        lblInfo.setHorizontalAlignment(SwingConstants.CENTER);
+        cardFormulario.add(Box.createVerticalStrut(20));
+        cardFormulario.add(lblInfo);
+
+        // Footer
+        JPanel footer = crearFooter();
+        footer.setAlignmentX(Component.CENTER_ALIGNMENT);
+        cardFormulario.add(Box.createVerticalGlue());
+        cardFormulario.add(footer);
+
+        panel.add(cardFormulario);
+        return panel;
+    }
+
+    private JPanel crearCampoCorreo() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setOpaque(false);
+        panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 80));
+
+        JLabel lblLabel = new JLabel("Correo Institucional");
+        lblLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        lblLabel.setForeground(ConstantesVisuales.COLOR_TEXTO_PRINCIPAL);
+        lblLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        txtCorreo = new PlaceholderTextField("usuario@epn.edu.ec");
+        txtCorreo.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        txtCorreo.setForeground(ConstantesVisuales.COLOR_TEXTO_PRINCIPAL);
+        txtCorreo.setBackground(new Color(248, 250, 252));
+        txtCorreo.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(ConstantesVisuales.COLOR_BORDE, 1),
+            BorderFactory.createEmptyBorder(10, 14, 10, 14)
         ));
+        txtCorreo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 45));
+        txtCorreo.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         // Efecto focus
-        txt.addFocusListener(new FocusAdapter() {
+        txtCorreo.addFocusListener(new FocusAdapter() {
             public void focusGained(FocusEvent e) {
-                txt.setBorder(BorderFactory.createCompoundBorder(
-                    new RoundedBorder(ConstantesVisuales.RADIO_BORDE_NORMAL, 
-                                    ConstantesVisuales.COLOR_PRIMARIO, 2),
-                    BorderFactory.createEmptyBorder(5, 9, 5, 9)
+                txtCorreo.setBackground(Color.WHITE);
+                txtCorreo.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(ConstantesVisuales.COLOR_PRIMARIO, 2),
+                    BorderFactory.createEmptyBorder(9, 13, 9, 13)
                 ));
             }
             public void focusLost(FocusEvent e) {
-                txt.setBorder(BorderFactory.createCompoundBorder(
-                    new RoundedBorder(ConstantesVisuales.RADIO_BORDE_NORMAL, 
-                                    ConstantesVisuales.COLOR_BORDE, 1),
-                    BorderFactory.createEmptyBorder(6, 10, 6, 10)
+                txtCorreo.setBackground(new Color(248, 250, 252));
+                txtCorreo.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(ConstantesVisuales.COLOR_BORDE, 1),
+                    BorderFactory.createEmptyBorder(10, 14, 10, 14)
                 ));
             }
         });
 
-        return txt;
+        panel.add(lblLabel);
+        panel.add(Box.createVerticalStrut(8));
+        panel.add(txtCorreo);
+
+        return panel;
     }
 
     private JPanel crearCampoPassword() {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setOpaque(false);
+        panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 80));
 
-        // Label
-        JLabel lblPassword = new JLabel("Contraseña *");
-        lblPassword.setFont(ConstantesVisuales.FUENTE_NEGRITA);
-        lblPassword.setForeground(ConstantesVisuales.COLOR_TEXTO_PRINCIPAL);
-        lblPassword.setAlignmentX(Component.LEFT_ALIGNMENT);
-        panel.add(lblPassword);
-        panel.add(Box.createVerticalStrut(6));
+        JLabel lblLabel = new JLabel("Contraseña");
+        lblLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        lblLabel.setForeground(ConstantesVisuales.COLOR_TEXTO_PRINCIPAL);
+        lblLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        // Panel con campo y botón
-        JPanel panelContenedor = new JPanel(new BorderLayout());
-        panelContenedor.setBackground(ConstantesVisuales.COLOR_TARJETA);
-        panelContenedor.setOpaque(false);
+        // Contenedor del campo y botón
+        JPanel contenedorCampo = new JPanel(new BorderLayout(0, 0));
+        contenedorCampo.setBackground(new Color(248, 250, 252));
+        contenedorCampo.setBorder(BorderFactory.createLineBorder(ConstantesVisuales.COLOR_BORDE, 1));
+        contenedorCampo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 45));
+        contenedorCampo.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         txtPassword = new JPasswordField();
-        txtPassword.setFont(ConstantesVisuales.FUENTE_NORMAL);
+        txtPassword.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         txtPassword.setForeground(ConstantesVisuales.COLOR_TEXTO_PRINCIPAL);
-        txtPassword.setBackground(Color.WHITE);
-        txtPassword.setBorder(BorderFactory.createCompoundBorder(
-            new RoundedBorder(ConstantesVisuales.RADIO_BORDE_NORMAL, 
-                            ConstantesVisuales.COLOR_BORDE, 1),
-            BorderFactory.createEmptyBorder(6, 10, 6, 10)
-        ));
+        txtPassword.setBackground(new Color(248, 250, 252));
+        txtPassword.setBorder(BorderFactory.createEmptyBorder(10, 14, 10, 14));
 
-        // Efecto focus
-        txtPassword.addFocusListener(new FocusAdapter() {
-            public void focusGained(FocusEvent e) {
-                txtPassword.setBorder(BorderFactory.createCompoundBorder(
-                    new RoundedBorder(ConstantesVisuales.RADIO_BORDE_NORMAL, 
-                                    ConstantesVisuales.COLOR_PRIMARIO, 2),
-                    BorderFactory.createEmptyBorder(5, 9, 5, 9)
-                ));
-            }
-            public void focusLost(FocusEvent e) {
-                txtPassword.setBorder(BorderFactory.createCompoundBorder(
-                    new RoundedBorder(ConstantesVisuales.RADIO_BORDE_NORMAL, 
-                                    ConstantesVisuales.COLOR_BORDE, 1),
-                    BorderFactory.createEmptyBorder(6, 10, 6, 10)
-                ));
-            }
-        });
-
-        btnMostrarPassword = new JButton("👁");
+        // Botón mostrar/ocultar
+        btnMostrarPassword = new JButton("Mostrar");
         btnMostrarPassword.setFocusPainted(false);
         btnMostrarPassword.setBorderPainted(false);
         btnMostrarPassword.setContentAreaFilled(false);
         btnMostrarPassword.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        btnMostrarPassword.setFont(ConstantesVisuales.FUENTE_NORMAL);
+        btnMostrarPassword.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         btnMostrarPassword.setForeground(ConstantesVisuales.COLOR_PRIMARIO);
-        btnMostrarPassword.setPreferredSize(new Dimension(40, 35));
+        btnMostrarPassword.setPreferredSize(new Dimension(70, 45));
         btnMostrarPassword.addActionListener(e -> togglePasswordVisibility());
 
-        panelContenedor.add(txtPassword, BorderLayout.CENTER);
-        panelContenedor.add(btnMostrarPassword, BorderLayout.EAST);
-        panelContenedor.setMaximumSize(new Dimension(Integer.MAX_VALUE, 
-            ConstantesVisuales.ALTURA_CAMPO_TEXTO));
+        contenedorCampo.add(txtPassword, BorderLayout.CENTER);
+        contenedorCampo.add(btnMostrarPassword, BorderLayout.EAST);
 
-        panel.add(panelContenedor);
-        panel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        // Efecto focus
+        txtPassword.addFocusListener(new FocusAdapter() {
+            public void focusGained(FocusEvent e) {
+                contenedorCampo.setBackground(Color.WHITE);
+                txtPassword.setBackground(Color.WHITE);
+                contenedorCampo.setBorder(BorderFactory.createLineBorder(
+                    ConstantesVisuales.COLOR_PRIMARIO, 2));
+            }
+            public void focusLost(FocusEvent e) {
+                contenedorCampo.setBackground(new Color(248, 250, 252));
+                txtPassword.setBackground(new Color(248, 250, 252));
+                contenedorCampo.setBorder(BorderFactory.createLineBorder(
+                    ConstantesVisuales.COLOR_BORDE, 1));
+            }
+        });
+
+        panel.add(lblLabel);
+        panel.add(Box.createVerticalStrut(8));
+        panel.add(contenedorCampo);
 
         return panel;
     }
 
+    private JPanel crearFooter() {
+        JPanel footer = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        footer.setOpaque(false);
+        footer.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
+
+        JLabel lblFooter = new JLabel("© 2026 Escuela Politécnica Nacional");
+        lblFooter.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+        lblFooter.setForeground(new Color(150, 150, 150));
+
+        footer.add(lblFooter);
+        return footer;
+    }
+
     private void togglePasswordVisibility() {
         passwordVisible = !passwordVisible;
-        txtPassword.setEchoChar(passwordVisible ? '\u0000' : '\u2022');
-        btnMostrarPassword.setText(passwordVisible ? "🙈" : "👁");
+        if (passwordVisible) {
+            txtPassword.setEchoChar('\u0000');
+            btnMostrarPassword.setText("Ocultar");
+        } else {
+            txtPassword.setEchoChar('●');
+            btnMostrarPassword.setText("Mostrar");
+        }
     }
 
     public void mostrarVentana() {
@@ -315,7 +431,24 @@ public class VistaLogin extends JFrame {
     }
 
     public void mostrarError(String mensaje) {
-        lblMensajeError.setText("⚠️ " + mensaje);
+        lblMensajeError.setText("✕  " + mensaje);
+        
+        // Animación de shake
+        Point ubicacionOriginal = getLocation();
+        Timer shakeTimer = new Timer(50, null);
+        final int[] contador = {0};
+        
+        shakeTimer.addActionListener(e -> {
+            if (contador[0] < 10) {
+                int offset = (contador[0] % 2 == 0) ? 5 : -5;
+                setLocation(ubicacionOriginal.x + offset, ubicacionOriginal.y);
+                contador[0]++;
+            } else {
+                setLocation(ubicacionOriginal);
+                ((Timer)e.getSource()).stop();
+            }
+        });
+        shakeTimer.start();
     }
 
     public void limpiarCampos() {
@@ -334,21 +467,30 @@ public class VistaLogin extends JFrame {
     }
 
     private void configurarAcciones() {
-        // Acción del botón ingresar
         btnIngresar.addActionListener(e -> intentarLogin());
-        
-        // Enter en campos de texto
         txtCorreo.addActionListener(e -> intentarLogin());
         txtPassword.addActionListener(e -> intentarLogin());
+        
+        // Enter en cualquier campo
+        getRootPane().setDefaultButton(btnIngresar);
     }
     
     private void intentarLogin() {
         String correo = obtenerCorreo();
         String password = obtenerPassword();
         
+        // Limpiar mensaje anterior
+        lblMensajeError.setText("");
+        
         // Validación básica
         if (correo.isEmpty()) {
             mostrarError("Por favor, ingrese su correo institucional");
+            txtCorreo.requestFocus();
+            return;
+        }
+        
+        if (!correo.contains("@")) {
+            mostrarError("El correo debe contener el símbolo @");
             txtCorreo.requestFocus();
             return;
         }
@@ -359,33 +501,47 @@ public class VistaLogin extends JFrame {
             return;
         }
         
-        // Deshabilitar botón mientras se procesa
+        // Deshabilitar interacción
         btnIngresar.setEnabled(false);
-        btnIngresar.setText("Ingresando...");
+        btnIngresar.setText("Verificando credenciales...");
+        txtCorreo.setEnabled(false);
+        txtPassword.setEnabled(false);
+        
+        // Cursor de espera
+        setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
         
         // Simular proceso en background
-        Timer timer = new Timer(300, evt -> {
+        Timer timer = new Timer(800, evt -> {
             ResultadoOperacion resultado = controlador.autenticar(correo, password);
             
+            // Restaurar interfaz
+            setCursor(Cursor.getDefaultCursor());
             btnIngresar.setEnabled(true);
-            btnIngresar.setText("Ingresar");
+            btnIngresar.setText("Ingresar al Sistema");
+            txtCorreo.setEnabled(true);
+            txtPassword.setEnabled(true);
             
             if (resultado.esExitoso()) {
-                ToastMessage.mostrar(this, "¡Bienvenido al sistema!", ToastMessage.TipoToast.EXITO);
+                // Animación de éxito
+                lblMensajeError.setForeground(ConstantesVisuales.COLOR_EXITO);
+                lblMensajeError.setText("✓  Acceso concedido. Bienvenido!");
                 
-                // Pequeño delay para ver el mensaje
-                Timer delay = new Timer(500, e2 -> {
+                // Delay antes de cerrar
+                Timer delayTimer = new Timer(1000, e2 -> {
                     limpiarCampos();
                     cerrar();
                     if (onLoginSuccess != null) {
                         onLoginSuccess.accept(controlador.obtenerTipoUsuario());
                     }
                 });
-                delay.setRepeats(false);
-                delay.start();
+                delayTimer.setRepeats(false);
+                delayTimer.start();
+                
             } else {
+                lblMensajeError.setForeground(ConstantesVisuales.COLOR_ERROR);
                 mostrarError(resultado.getMensaje());
-                ToastMessage.mostrar(this, "Credenciales incorrectas", ToastMessage.TipoToast.ERROR);
+                txtPassword.setText("");
+                txtPassword.requestFocus();
             }
         });
         timer.setRepeats(false);

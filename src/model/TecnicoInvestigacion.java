@@ -106,6 +106,9 @@ public class TecnicoInvestigacion {
     }
 
     public void setHorasSemanales(int horasSemanales) {
+        if (horasSemanales < 1 || horasSemanales > 40) {
+            throw new IllegalArgumentException("Las horas semanales deben estar entre 1 y 40");
+        }
         this.horasSemanales = horasSemanales;
     }
 
@@ -114,6 +117,9 @@ public class TecnicoInvestigacion {
     }
 
     public void setMesesContratados(int mesesContratados) {
+        if (mesesContratados < 1 || mesesContratados > 12) {
+            throw new IllegalArgumentException("Los meses contratados deben estar entre 1 y 12");
+        }
         this.mesesContratados = mesesContratados;
     }
 
@@ -122,6 +128,12 @@ public class TecnicoInvestigacion {
     }
 
     public void setEstado(String estado) {
+        if (estado == null || estado.trim().isEmpty()) {
+            throw new IllegalArgumentException("El estado no puede estar vacío");
+        }
+        if (!estado.matches("ACTIVO|INACTIVO")) {
+            throw new IllegalArgumentException("El estado debe ser ACTIVO o INACTIVO");
+        }
         this.estado = estado;
     }
 
@@ -180,11 +192,45 @@ public class TecnicoInvestigacion {
     }
 
     /**
-     * Calcula el costo total del técnico (horas * meses)
+     * Da de baja el técnico con validación
      */
-    public double calcularCostoTotal() {
-        // Estimado: $15 por hora (puedes ajustar este valor)
-        final double TARIFA_HORA = 15.0;
-        return horasSemanales * 4 * mesesContratados * TARIFA_HORA;
+    public ResultadoOperacion darDeBaja(String motivo, Date fecha) {
+        ResultadoOperacion resultado = new ResultadoOperacion();
+
+        // Validar que no esté ya dado de baja
+        if (!esActivo()) {
+            resultado.setMensaje("El técnico ya está inactivo");
+            resultado.agregarError("Estado inválido");
+            return resultado;
+        }
+
+        // Validar motivo
+        if (motivo == null || motivo.trim().isEmpty()) {
+            resultado.setMensaje("El motivo de baja es obligatorio");
+            resultado.agregarError("Motivo vacío");
+            return resultado;
+        }
+
+        // Validar fecha
+        if (fecha == null) {
+            resultado.setMensaje("La fecha de baja es obligatoria");
+            resultado.agregarError("Fecha nula");
+            return resultado;
+        }
+
+        if (fecha.before(fechaRegistro)) {
+            resultado.setMensaje("La fecha de baja no puede ser anterior a la fecha de registro");
+            resultado.agregarError("Fecha inválida");
+            return resultado;
+        }
+
+        // Aplicar baja
+        setEstado("INACTIVO");
+        this.motivoSalida = motivo;
+        this.fechaFinalizacion = fecha;
+
+        resultado.setExitoso(true);
+        resultado.setMensaje("Técnico dado de baja exitosamente");
+        return resultado;
     }
 }

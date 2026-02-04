@@ -1,11 +1,14 @@
 package model;
 
 import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 import java.util.stream.Collectors;
+
+import model.service.ServicioDeEstadisticas;
+import model.service.ServicioDeReportes;
 
 /**
  * Singleton que representa la Jefa de Departamento
@@ -24,14 +27,14 @@ public class JefaDepartamento extends MiembroEPN {
 
     private JefaDepartamento() {
         super();
-        this.codigoUnico = "JEFA_DPTO";
-        this.correoInstitucional = "jefa@fis.epn.edu.ec";
-        this.password = "admin";
-        this.nombres = "Jefa";
-        this.apellidos = "Departamento";
-        this.rol = "JEFA_DEPARTAMENTO";
-        this.estado = "ACTIVO";
         this.notificaciones = new ArrayList<>();
+        inicializarCodigoUnico("JEFA_DPTO");
+        inicializarCorreo("jefa@fis.epn.edu.ec");
+        inicializarPassword("admin");
+        inicializarNombres("Jefa");
+        inicializarApellidos("Departamento");
+        inicializarRol("JEFA_DEPARTAMENTO");
+        inicializarEstado("ACTIVO");
     }
 
     /**
@@ -66,10 +69,10 @@ public class JefaDepartamento extends MiembroEPN {
     }
 
     /**
-     * Obtiene todas las notificaciones
+     * Obtiene todas las notificaciones (copia inmutable)
      */
     public List<Notificacion> getNotificaciones() {
-        return new ArrayList<>(notificaciones);
+        return Collections.unmodifiableList(notificaciones);
     }
 
     /**
@@ -129,195 +132,120 @@ public class JefaDepartamento extends MiembroEPN {
         return notificaciones.size();
     }
 
-    // ============ RESPONSABILIDADES DE REPORTES ============
+    // ============ LÓGICA DE DOMINIO (SIN PERSISTENCIA) ============
 
     /**
-     * Genera un reporte general del sistema
+     * Filtra ayudantes según criterios
      */
-    public Reporte generarReporteGeneral(List<Proyectos> proyectos, List<Ayudante> ayudantes) {
-        Reporte reporte = new Reporte("REPORTE_001", "GENERAL", "Reporte General del Sistema");
-        reporte.setFechaGeneracion(new Date());
-
-        StringBuilder contenido = new StringBuilder();
-        contenido.append("REPORTE GENERAL DE SISTEMA DE GESTIÓN DE AYUDANTES\n");
-        contenido.append("=".repeat(60)).append("\n\n");
-
-        Map<String, Object> estadisticas = calcularEstadisticas(ayudantes);
-        reporte.setEstadisticas(estadisticas);
-
-        contenido.append("ESTADÍSTICAS GENERALES:\n");
-        contenido.append("Total de Ayudantes: ").append(ayudantes.size()).append("\n");
-        contenido.append("Ayudantes Activos: ").append(estadisticas.get("activos")).append("\n");
-        contenido.append("Promedio IRA: ").append(String.format("%.2f", estadisticas.get("promedioIRA"))).append("\n");
-        contenido.append("Total Proyectos: ").append(proyectos.size()).append("\n\n");
-
-        contenido.append("DETALLE DE AYUDANTES:\n");
-        contenido.append("-".repeat(60)).append("\n");
-        contenido.append(String.format("%-12s %-30s %-8s %-6s %-8s\n",
-            "CÓDIGO", "NOMBRES", "CARRERA", "NIVEL", "IRA"));
-        contenido.append("-".repeat(60)).append("\n");
-
-        for (Ayudante a : ayudantes) {
-            if (a.esActivo()) {
-                String carreraCorta = a.getCarrera().length() > 8 ?
-                    a.getCarrera().substring(0, 8) : a.getCarrera();
-                contenido.append(String.format("%-12s %-30s %-8s %-6d %8.2f\n",
-                    a.getCodigoUnico(),
-                    a.getNombresCompletos().length() > 30 ?
-                        a.getNombresCompletos().substring(0, 27) + "..." :
-                        a.getNombresCompletos(),
-                    carreraCorta,
-                    a.getNivel(),
-                    a.getIRA()));
-            }
-        }
-        contenido.append("-".repeat(60)).append("\n");
-
-        reporte.setContenido(contenido.toString());
-        return reporte;
+    public List<Ayudante> filtrarAyudantes(List<Ayudante> ayudantes, Map<String, Object> filtros) {
+        return Ayudante.filtrar(ayudantes, filtros);
     }
 
     /**
-     * Genera un reporte específico por proyecto
+     * Obtiene ayudantes activos
      */
+    public List<Ayudante> obtenerAyudantesActivos(List<Ayudante> ayudantes) {
+        return Ayudante.obtenerActivos(ayudantes);
+    }
+
     /**
-     * Genera un reporte completo del proyecto
-     * 
-     * NOTA: Usa getAyudantes() deprecated que retorna lista vacía.
-     * En futuro, debería inyectar AyudanteDAO para obtener datos reales.
+     * Obtiene ayudantes inactivos
      */
-    @SuppressWarnings("deprecation")
-    public Reporte generarReportePorProyecto(Proyectos proyecto) {
-        String idReporte = "REPORTE_PROYECTO_" + proyecto.getCodigoProyecto();
-        Reporte reporte = new Reporte(idReporte, "PROYECTO", "Reporte Proyecto: " + proyecto.getNombreProyecto());
-        reporte.setFechaGeneracion(new Date());
+    public List<Ayudante> obtenerAyudantesInactivos(List<Ayudante> ayudantes) {
+        return Ayudante.obtenerInactivos(ayudantes);
+    }
 
-        StringBuilder contenido = new StringBuilder();
-        contenido.append("REPORTE DE PROYECTO\n");
-        contenido.append("=".repeat(60)).append("\n\n");
-        contenido.append("Código: ").append(proyecto.getCodigoProyecto()).append("\n");
-        contenido.append("Nombre: ").append(proyecto.getNombreProyecto()).append("\n");
-        contenido.append("Tipo: ").append(proyecto.getTipoProyecto().getDescripcion()).append("\n");
-        contenido.append("Director: ").append(proyecto.getDirector().getNombresCompletos()).append("\n");
-        contenido.append("Ayudantes Activos: ").append(proyecto.getAyudantesActivos()).append("\n");
-        contenido.append("Cupos Disponibles: ").append(proyecto.getCuposDisponibles()).append("\n\n");
+    /**
+     * Obtiene ayudantes por carrera
+     */
+    public List<Ayudante> obtenerAyudantesPorCarrera(List<Ayudante> ayudantes, String carrera) {
+        return Ayudante.porCarrera(ayudantes, carrera);
+    }
 
-        List<Ayudante> ayudantesProyecto = proyecto.getAyudantes();
-        Map<String, Object> estadisticas = calcularEstadisticas(ayudantesProyecto);
-        reporte.setEstadisticas(estadisticas);
+    /**
+     * Obtiene ayudantes por nivel
+     */
+    public List<Ayudante> obtenerAyudantesPorNivel(List<Ayudante> ayudantes, int nivel) {
+        return Ayudante.porNivel(ayudantes, nivel);
+    }
 
-        if (!ayudantesProyecto.isEmpty()) {
-            contenido.append("AYUDANTES DEL PROYECTO:\n");
-            contenido.append("-".repeat(60)).append("\n");
-            contenido.append(String.format("%-12s %-25s %-8s %-8s\n",
-                "CÓDIGO", "NOMBRES", "NIVEL", "HORAS"));
-            contenido.append("-".repeat(60)).append("\n");
+    /**
+     * Obtiene estadísticas generales
+     */
+    public Map<String, Object> obtenerEstadisticasGenerales(List<Ayudante> ayudantes) {
+        return ServicioDeEstadisticas.calcularTodas(ayudantes);
+    }
 
-            for (Ayudante a : ayudantesProyecto) {
-                if (a.esActivo()) {
-                    contenido.append(String.format("%-12s %-25s %-8d %-8d\n",
-                        a.getCodigoUnico(),
-                        a.getNombresCompletos().length() > 25 ?
-                            a.getNombresCompletos().substring(0, 22) + "..." :
-                            a.getNombresCompletos(),
-                        a.getNivel(),
-                        a.getHorasSemanales()));
-                }
-            }
-            contenido.append("-".repeat(60)).append("\n");
+    /**
+     * Obtiene estadísticas por carrera
+     */
+    public Map<String, Map<String, Object>> obtenerEstadisticasPorCarrera(List<Ayudante> ayudantes) {
+        return ServicioDeEstadisticas.estadisticasPorCarrera(ayudantes);
+    }
+
+    /**
+     * Obtiene estadísticas por nivel
+     */
+    public Map<Integer, Map<String, Object>> obtenerEstadisticasPorNivel(List<Ayudante> ayudantes) {
+        return ServicioDeEstadisticas.estadisticasPorNivel(ayudantes);
+    }
+
+    /**
+     * Retorna resumen por proyecto: codigo, nombre, planificados, contratados activos,
+     * cupos disponibles, estado, inicio, fin
+     */
+    public List<Object[]> obtenerResumenProyectos(List<Proyectos> proyectos, Map<String, List<Ayudante>> ayudantesPorProyecto) {
+        List<Object[]> resumen = new ArrayList<>();
+        for (Proyectos p : proyectos) {
+            List<Ayudante> ayudantesProyecto = ayudantesPorProyecto.getOrDefault(p.getCodigoProyecto(), List.of());
+            Object[] fila = p.crearResumen(ayudantesProyecto);
+            resumen.add(fila);
         }
+        return resumen;
+    }
 
-        reporte.setContenido(contenido.toString());
-        return reporte;
+    /**
+     * Genera un reporte general
+     */
+    public Reporte generarReporteGeneral(List<Proyectos> proyectos, List<Ayudante> ayudantes) {
+        return ServicioDeReportes.generarReporteGeneral(proyectos, ayudantes);
+    }
+
+    /**
+     * Genera un reporte por proyecto
+     */
+    public Reporte generarReportePorProyecto(Proyectos proyecto) {
+        if (proyecto == null) {
+            return null;
+        }
+        return ServicioDeReportes.generarReportePorProyecto(proyecto);
     }
 
     /**
      * Genera un reporte por carrera
      */
     public Reporte generarReportePorCarrera(String carrera, List<Ayudante> ayudantes) {
-        Reporte reporte = new Reporte("REPORTE_CARRERA_" + carrera, "CARRERA", "Reporte Carrera: " + carrera);
-        reporte.setFechaGeneracion(new Date());
-
-        List<Ayudante> ayudantesCarrera = ayudantes.stream()
-                .filter(a -> carrera.equals(a.getCarrera()))
-                .toList();
-
-        StringBuilder contenido = new StringBuilder();
-        contenido.append("REPORTE POR CARRERA\n");
-        contenido.append("=".repeat(60)).append("\n\n");
-        contenido.append("Carrera: ").append(carrera).append("\n");
-        contenido.append("Total Ayudantes: ").append(ayudantesCarrera.size()).append("\n");
-
-        Map<String, Object> estadisticas = calcularEstadisticas(ayudantesCarrera);
-        reporte.setEstadisticas(estadisticas);
-
-        contenido.append("Promedio IRA: ").append(String.format("%.2f", estadisticas.get("promedioIRA"))).append("\n");
-
-        reporte.setContenido(contenido.toString());
-        return reporte;
+        return ServicioDeReportes.generarReportePorCarrera(carrera, ayudantes);
     }
 
     /**
      * Genera un reporte por nivel
      */
     public Reporte generarReportePorNivel(int nivel, List<Ayudante> ayudantes) {
-        Reporte reporte = new Reporte("REPORTE_NIVEL_" + nivel, "NIVEL", "Reporte Nivel: " + nivel);
-        reporte.setFechaGeneracion(new Date());
-
-        List<Ayudante> ayudantesNivel = ayudantes.stream()
-                .filter(a -> a.getNivel() == nivel)
-                .toList();
-
-        StringBuilder contenido = new StringBuilder();
-        contenido.append("REPORTE POR NIVEL\n");
-        contenido.append("=".repeat(60)).append("\n\n");
-        contenido.append("Nivel: ").append(nivel).append("\n");
-        contenido.append("Total Ayudantes: ").append(ayudantesNivel.size()).append("\n");
-
-        Map<String, Object> estadisticas = calcularEstadisticas(ayudantesNivel);
-        reporte.setEstadisticas(estadisticas);
-
-        reporte.setContenido(contenido.toString());
-        return reporte;
-    }
-
-    /**
-     * Calcula estadísticas de una lista de ayudantes
-     */
-    private Map<String, Object> calcularEstadisticas(List<Ayudante> ayudantesList) {
-        Map<String, Object> stats = new HashMap<>();
-
-        if (ayudantesList.isEmpty()) {
-            stats.put("total", 0);
-            stats.put("activos", 0);
-            stats.put("promedioIRA", 0.0);
-            stats.put("promedioHoras", 0.0);
-            return stats;
-        }
-
-        long activos = ayudantesList.stream().filter(Ayudante::esActivo).count();
-        double promedioIRA = ayudantesList.stream().mapToDouble(Ayudante::getIRA).average().orElse(0.0);
-        double promedioHoras = ayudantesList.stream().mapToDouble(Ayudante::getHorasSemanales).average().orElse(0.0);
-
-        stats.put("total", ayudantesList.size());
-        stats.put("activos", activos);
-        stats.put("promedioIRA", promedioIRA);
-        stats.put("promedioHoras", promedioHoras);
-
-        return stats;
+        return ServicioDeReportes.generarReportePorNivel(nivel, ayudantes);
     }
 
     // ============ RESPONSABILIDAD DE USUARIO ============
     
     @Override
     public boolean esActivo() {
-        return "ACTIVO".equals(estado);
+        return "ACTIVO".equals(getEstado());
     }
 
     // ============ GETTERS Y SETTERS ============
     
     public List<Notificacion> getNotificacionesList() {
-        return notificaciones;
+        return Collections.unmodifiableList(notificaciones);
     }
 
     public void setNotificaciones(List<Notificacion> notificaciones) {
@@ -331,8 +259,8 @@ public class JefaDepartamento extends MiembroEPN {
     public String toString() {
         return "JefaDepartamento{" +
                 "nombre='" + getNombresCompletos() + '\'' +
-                ", correo='" + correoInstitucional + '\'' +
-                ", estado='" + estado + '\'' +
+                ", correo='" + getCorreoInstitucional() + '\'' +
+                ", estado='" + getEstado() + '\'' +
                 ", notificacionesNoLeidas=" + contarNotificacionesNoLeidas() +
                 '}';
     }
