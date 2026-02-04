@@ -10,6 +10,10 @@ public class Estudiante extends MiembroEPN {
     private int nivel;
 
     public Estudiante() {
+        super();
+        this.password = "N/A";
+        this.rol = "ESTUDIANTE";
+        this.estado = "ACTIVO";
     }
 
     public Estudiante(String codigoUnico, String cedula, String correoInstitucional,

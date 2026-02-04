@@ -45,6 +45,9 @@ public class App {
         // Inicializar DAOs
         inicializarDAOs();
         
+        // Analizar esquema de BD
+        analizarEsquemaBD();
+        
         // Inicializar controlador de autenticación
         controladorAuth = new ControladorAutenticacion(miembroDAO, estudianteDAO, ayudanteDAO);
         
@@ -65,6 +68,51 @@ public class App {
         asistenteDAO = new AsistenteDAO();
 
         System.out.println("✓ DAOs inicializados correctamente");
+    }
+
+    private static void analizarEsquemaBD() {
+        System.out.println("\n=== ANÁLISIS DEL ESQUEMA DE LA BASE DE DATOS ===\n");
+        
+        try {
+            java.sql.Connection conn = ConexionBD.getInstancia().getConexion();
+            java.sql.DatabaseMetaData meta = conn.getMetaData();
+            
+            // Obtener todas las tablas
+            java.sql.ResultSet rs = meta.getTables(null, null, "%", new String[]{"TABLE"});
+            while (rs.next()) {
+                String tableName = rs.getString("TABLE_NAME");
+                System.out.println("Tabla: " + tableName);
+                
+                // Obtener columnas de la tabla
+                java.sql.ResultSet rsColumns = meta.getColumns(null, null, tableName, "%");
+                while (rsColumns.next()) {
+                    String columnName = rsColumns.getString("COLUMN_NAME");
+                    String columnType = rsColumns.getString("TYPE_NAME");
+                    int columnSize = rsColumns.getInt("COLUMN_SIZE");
+                    boolean isNullable = rsColumns.getInt("NULLABLE") == 1;
+                    System.out.println("  - " + columnName + " (" + columnType + "(" + columnSize + ")" + (isNullable ? "" : " NOT NULL") + ")");
+                }
+                rsColumns.close();
+                
+                // Obtener foreign keys
+                java.sql.ResultSet rsFK = meta.getImportedKeys(null, null, tableName);
+                while (rsFK.next()) {
+                    String fkColumn = rsFK.getString("FKCOLUMN_NAME");
+                    String pkTable = rsFK.getString("PKTABLE_NAME");
+                    String pkColumn = rsFK.getString("PKCOLUMN_NAME");
+                    System.out.println("  FK: " + fkColumn + " -> " + pkTable + "." + pkColumn);
+                }
+                rsFK.close();
+                
+                System.out.println();
+            }
+            rs.close();
+            
+        } catch (Exception e) {
+            System.out.println("Error al analizar esquema: " + e.getMessage());
+        }
+        
+        System.out.println("=== FIN ANÁLISIS ===\n");
     }
 
 

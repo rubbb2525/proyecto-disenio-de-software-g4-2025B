@@ -216,8 +216,12 @@ public class DialogoFormularioEstudiante extends JDialog {
                 guardado = true;
                 dispose();
             } else {
+                String errorMsg = estudianteDAO.getLastError();
+                if (errorMsg.isEmpty()) {
+                    errorMsg = "Verifique que no exista un registro con el mismo código, cédula o correo.";
+                }
                 JOptionPane.showMessageDialog(this,
-                    "Error al guardar el estudiante. Verifique que no exista un registro con el mismo código o cédula.",
+                    "Error al guardar el estudiante: " + errorMsg,
                     "Error",
                     JOptionPane.ERROR_MESSAGE);
             }
